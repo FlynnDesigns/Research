@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  10
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      physicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermoType
+{
+    type            heSolidThermo;
+    mixture         pureMixture;
+    transport       constIso;
+    thermo          hConst;
+    equationOfState rhoConst;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+// Source:  https://reader.elsevier.com/reader/sd/pii/S0017931009001847?token=CB96932DC775303E3CF63485E78920284BB74371793AF0C1CFB3F55E20312D9CD2FBF6CE52C64D495D98634692A90974&originRegion=us-east-1&originCreation=20221130205354
+
+// Material is aluminum alloy 6061
+mixture
+{
+    specie
+    {
+        molWeight   63.5;   // [g/mol]
+    }
+
+    transport
+    {
+        kappa   202.4;        // [W/m/K]
+    }
+
+    thermodynamics
+    {
+        Hf      0;
+        Cp      871;        // [J/kg/K]
+    }
+
+    equationOfState
+    {
+        rho     2719;       // [kg/m^3]
+    }
+}
+
+// ************************************************************************* //

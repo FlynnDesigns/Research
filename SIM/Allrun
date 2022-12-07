@@ -1,0 +1,6 @@
+./Allclean
+./Allmesh
+source /opt/openfoam10/etc/bashrc
+rm -r 100
+#./mychtMultiRegionFoam
+chtMultiRegionFoam
