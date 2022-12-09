@@ -3,10 +3,11 @@
 import os 
 import numpy as np
 
-# Default settings 
-cells_in_x = 66 # Number of cells in the x direction
-cells_in_y = 74 # Number of cells in the y direction
-image_size = 64 # Size of the image pixel x pixel
+# Default settings
+refine = 1
+cells_in_x = 66 * refine # Number of cells in the x direction
+cells_in_y = 74 * refine # Number of cells in the y direction
+image_size = 64 * refine # Size of the image pixel x pixel
 
 def isfloat(num):
     try:
@@ -16,7 +17,8 @@ def isfloat(num):
         return False
 
 # Changing to working directory
-home = '/home/nathan/Desktop/Current_SIM/'
+home = '/home/nathan/Desktop/Group_presentations/Update_12_12/SIM_2/'
+
 os.chdir(home)
 
 # Default values for the program
@@ -76,7 +78,7 @@ def getValues(top_dir, fileName):
     return list
 
 # Function to convert dict to array
-def getArray(dict, cells_in_x = 66, cells_in_y = 74, image_size = 64):
+def getArray(dict, cells_in_x, cells_in_y, image_size):
     output = list(dict.values())
     output = np.array(output).reshape(-1, cells_in_x)
     output = np.flip(output, 0)
@@ -121,6 +123,8 @@ os.chdir(home)
 # Getting fluid temperatures
 temperaturesFluid = getValues(top_dir, "/fluid/T")
 fluid_temp_dict = {cellZoneFluid[i]: temperaturesFluid[i] for i in range(len(cellZoneFluid))}
+fluidTempAvg = sum(temperaturesFluid)/len(cellZoneFluid)
+print(fluidTempAvg)
 
 # Getting solid temperatures
 temperaturesSolid = getValues(top_dir, "/solid/T")
@@ -132,7 +136,7 @@ temp_dict = {**solid_temp_dict, **fluid_temp_dict}
 # Sorting the dictionary based off of keys
 temp_dict_sorted = sorted(temp_dict)
 temp_dict = {key:temp_dict[key] for key in temp_dict_sorted}
-temp = getArray(temp_dict, cells_in_x)
+temp = getArray(temp_dict, cells_in_x, cells_in_y, image_size)
 #############################################################################################################################
 # Getting fluid pressures
 pressuresFluid = getValues(top_dir, "/fluid/p")
@@ -148,7 +152,7 @@ pressure_dict = {**solid_pressure_dict, **fluid_pressure_dict}
 # Sorting the dictionary based off of keys
 pressure_dict_sorted = sorted(pressure_dict)
 pressure_dict = {key:pressure_dict[key] for key in pressure_dict_sorted}
-pressure = getArray(pressure_dict, cells_in_x)
+pressure = getArray(pressure_dict, cells_in_x, cells_in_y, image_size)
 ###########################################################################################################################
 # Getting fluid density field 
 densityFluid = [0] * len(temperaturesFluid)
@@ -164,7 +168,7 @@ density_dict = {**solid_density_dict, **fluid_density_dict}
 # Sorting the dictionary based off of keys
 density_dict_sorted = sorted(density_dict)
 density_dict = {key:density_dict[key] for key in density_dict_sorted}
-density = getArray(density_dict, cells_in_x)
+density = getArray(density_dict, cells_in_x, cells_in_y, image_size)
 
 import matplotlib.pyplot as plt
 
@@ -184,7 +188,7 @@ plt.show()
 fig = plt.figure(figsize=(6, 3.2))
 ax = fig.add_subplot(111)
 ax.set_title('colorMap')
-plt.imshow(pressure)
+plt.imshow(temp)
 ax.set_aspect('equal')
 cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
 cax.get_xaxis().set_visible(False)
