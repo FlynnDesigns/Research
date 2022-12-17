@@ -9,10 +9,10 @@ source $HOME/OpenFOAM/OpenFOAM-7/etc/bashrc WM_LABEL_SIZE=64 FOAMY_HEX_MESH=yes
 blockMesh
 
 # Building OpenFoam-5 points to mesh
-#cd simpleFoam
-#wclean
-#wmake
-#cd ..
+cd simpleFoam
+wclean
+wmake
+cd ..
 
 # Moving files around to have the zones be assigned
 # Creating solid and fluid regions
