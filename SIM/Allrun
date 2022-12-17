@@ -1,6 +1,63 @@
-./Allclean
-./Allmesh
-source /opt/openfoam10/etc/bashrc
+#--Cleaning---------------------------------------------------------------------
+#!/bin/sh
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Source tutorial clean functions
+. $WM_PROJECT_DIR/bin/tools/CleanFunctions
+
+rm -rf constant/polyMesh
+rm -rf constant/fluid/polyMesh
+rm -rf constant/solid/polyMesh
+
+rm -r generateAndSplit/fluidID.csv
+rm -r generateAndSplit/solidID.csv
+
+# Emptying both CSV files
+>fluidID.csv
+>solidID.csv
+
+cleanCase
+#------------------------------------------------------------------------------
+#--Meshing---------------------------------------------------------------------
+# Using openfoam 7 to create mesh
+source $HOME/OpenFOAM/OpenFOAM-7/etc/bashrc WM_LABEL_SIZE=64 FOAMY_HEX_MESH=yes
+
+# Generating standard block mesh
+blockMesh
+
+# Building OpenFoam-5 points to mesh
+cd simpleFoam
+wclean
+wmake
+cd ..
+
+# Moving files around to have the zones be assigned
+# Creating solid and fluid regions
+./test
+cp -r fluidID.csv generateAndSplit/
+cp -r solidID.csv generateAndSplit/
+cd generateAndSplit/
+python3 zoneIDReplace.py
+cp -r cellZones ../constant/polyMesh
+cd ..
+
+# Removing 100 file that shouldn't be there 
 rm -r 100
-#./mychtMultiRegionFoam
+
+# Doing 1 level of mesh refinement
+refineMesh -all -overwrite
+
+#Split mesh into different surface regions
+transformPoints -scale "(0.001 0.001 0.001)"
+topoSet
+
+# Split up the mesh into different physical regions
+splitMeshRegions -cellZonesOnly -defaultRegionName fluid -overwrite
+
+# Ensuring that 100 file is not there
+rm -r 100
+
+# Running the simulation 
 chtMultiRegionFoam
+
+# Post processing the simulation into one output
