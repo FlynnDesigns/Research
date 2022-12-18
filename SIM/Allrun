@@ -16,10 +16,12 @@ rm -r generateAndSplit/solidID.csv
 >fluidID.csv
 >solidID.csv
 
+# Removing old build file 
+rm -r test
+
 cleanCase
-#------------------------------------------------------------------------------
+
 #--Meshing---------------------------------------------------------------------
-# Using openfoam 7 to create mesh
 source $HOME/OpenFOAM/OpenFOAM-7/etc/bashrc WM_LABEL_SIZE=64 FOAMY_HEX_MESH=yes
 
 # Generating standard block mesh

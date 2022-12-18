@@ -1,3 +1,0 @@
-SOURCE += test.C
-
-EXE = ../test

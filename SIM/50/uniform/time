@@ -10,42 +10,20 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "50/uniform";
+    object      time;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     simpleFoam;
+value           50;
 
-startFrom       latestTime;
+name            "50";
 
-startTime       0;
-
-stopAt          endTime;
-
-endTime         2000;
+index           50;
 
 deltaT          1;
 
-writeControl    timeStep;
-
-writeInterval   50;
-
-purgeWrite      1;
-
-writeFormat     ascii;
-
-writePrecision  8;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   8;
-
-graphFormat     raw;
-
-runTimeModifiable true;
+deltaT0         1;
 
 
 // ************************************************************************* //
