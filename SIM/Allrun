@@ -63,3 +63,4 @@ rm -r 100
 chtMultiRegionFoam
 
 # Post processing the simulation into one output
+python3 openfoam_results_to_array.py
