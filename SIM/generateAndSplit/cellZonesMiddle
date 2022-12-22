@@ -1,8 +1,0 @@
-)
-;
-}
-
-solid
-{
-    type cellZone;
-cellLabels      List<label> 
