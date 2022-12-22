@@ -1,0 +1,114 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  7
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+xMin 0;
+xMax 66; 
+yMin 0;
+yMax 74;
+zMin 0; 
+zMax 1;
+
+/*
+Height is 64 blocks..
+Width is 64 blocks..
+
+First 5 * 66 cells are not useful in the output (cells 0 to 329). 
+Last 5 * 66 cells are not useful in the output (cells 4553 to 4883).
+
+Total cells = 74 * 66 = 4884
+Cells go from 0 to 4883
+
+I care about cells 330 to 4553 (4223 cells in total)
+*/
+vertices
+(
+    // Fluid and solid region
+    ($xMin $yMin $zMin) //-25, -30, 0 -- 0
+    ($xMax $yMin $zMin) // 25, -30, 0 -- 1
+    ($xMax $yMax $zMin) // 25, 30, 0  -- 2
+    ($xMin $yMax $zMin) //-25, 30, 0  -- 3
+    ($xMin $yMin $zMax) //-25, -30, 1 -- 4
+    ($xMax $yMin $zMax) // 25, -30, 1 -- 5
+    ($xMax $yMax $zMax) // 25, 30, 1  -- 6
+    ($xMin $yMax $zMax) //-25, 30, 1  -- 7
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) fluid (66 74 1) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+faces
+(
+);
+boundary
+(
+    inlet
+    {
+    	type patch;
+    	faces
+    	(
+    		(0 1 4 5)
+    	);
+    }
+    outlet
+    {
+    	type patch;
+    	faces
+    	(
+    		(2 3 6 7)
+    	);
+    }
+    top
+    {
+    	type empty;
+    	faces
+    	(
+    		(4 5 6 7)
+    	);
+    }
+    bottom
+    {
+    	type empty;
+    	faces
+    	(
+    		(0 1 2 3)
+    	);
+    }
+    right
+    {
+    	type wall;
+    	faces
+    	(
+    		(1 2 5 6)
+    	);
+    }
+    left
+    {
+    	type wall;
+    	faces
+    	(
+    		(0 3 4 7)
+    	);
+    }
+    
+);
+
+// ************************************************************************* //

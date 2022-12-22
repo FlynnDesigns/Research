@@ -1,0 +1,33 @@
+#!/bin/bash
+
+ProcId=$1
+
+# Number of simulations to be ran
+simNum="1"
+i="0"
+
+while [ $i != $simNum ]
+do
+	# Grabbing a set of new solid coordinates 
+	fileNum=$((ProcId*$simNum+$i))
+	echo "$(printf '%0.0f.txt' $fileNum)"
+	cp -r coordinates/$(printf '%0.0f.txt' $fileNum) solid_coordinates.txt
+	
+	# Running the simulation
+	./Allrun 
+	
+	# Changing the name of the output 
+	cp -r temp_results.txt $(printf 'T_%.0f.txt' $fileNum)
+	
+	# Incrementing i
+	i=$(($i+1))
+	
+	# Clearing old solid_coordinates.txt
+	rm -r solid_coordinates.txt
+	
+	# Clearing old temp results 
+	rm -r temp_results.txt
+done
+
+# Zipping all of the files into one final tar file
+tar cf $(printf 'run_%0.0f.gz' $ProcId) *.txt
