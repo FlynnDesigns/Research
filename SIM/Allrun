@@ -62,5 +62,8 @@ rm -r 100
 # Running the simulation 
 chtMultiRegionFoam
 
+# Cleaning up any Zip files
+rm -r *.gz
+
 # Post processing the simulation into one output
 python3 openfoam_results_to_array.py
