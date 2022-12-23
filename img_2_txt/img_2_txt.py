@@ -2,6 +2,8 @@
 import skimage
 from numpy import asarray
 import numpy as np
+import cv2
+
 # Default libraries
 import sys
 import os
@@ -24,23 +26,22 @@ for image_name in os.listdir(images):
     image = skimage.io.imread(images + image_name)
     original = asarray(image) 
     current = np.copy(original)
-    size = current.shape
-    colorChannels = size[2]
 
-    # Checking to make sure there are only 1 color channel
-    if colorChannels > 1:
-        current = current[:,:,0]
+    # Resizing 
+    current = cv2.resize(current, dsize=(64,64),  interpolation=cv2.INTER_CUBIC)
+    size = current.shape
+    current = current[:,:,0]
 
     # Adding fluid borders to image. If this is the correct size, it doesnt matter
     if size[0] == 64 or size[1] == 64:
         output = np.ones((74,66)) * 255
         output[5:69,1:65] = current
         current = output 
-
+       
     # Applying filter to convert region to fluid and solid
     for j in range (0, 65):
         for i in range (0, 73):
-            if current[i,j] >= 100:
+            if current[i,j] >= 90:
                 current[i,j] = 0
             else:
                 current[i,j] = 1
