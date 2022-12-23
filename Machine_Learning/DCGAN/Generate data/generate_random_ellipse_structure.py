@@ -14,22 +14,19 @@ import ellipse_packing as ep
 import os
 
 def generate_random_ellipse_structure(number_of_images = 20000):
-    run_directory = '/home/nathan/Desktop/'
+    run_directory = '/home/nathan/Desktop/Research/Datasets/GAN/Input/RandxRand/'
     os.chdir(run_directory)
     
     image_list = []
     for i in range(number_of_images):
         # Nate custom parameters
-        param_1 = np.random.uniform(0.5, 5) # Some sort of scaling term
-        param_2 = np.random.uniform(1, 2) # Some sort of scaling term - semi major axis
-        param_3 = np.random.uniform(1, 2) # Some sort of scaling term - semi minor axis
-        scaling = np.random.uniform(0.5, 1) # Some sort of scaling term
+        param_1 = np.random.uniform(0.25, 2) # Some sort of scaling term
+        param_2 = np.random.uniform(0.25, 1.5) # Some sort of scaling term - semi major axis
+        param_3 = np.random.uniform(0.25, 1.5) # Some sort of scaling term - semi minor axis
+        scaling = np.random.uniform(0.25, 2) # Some sort of scaling term
 
-        #num_x = np.random.randint(1, 4) # Number of elipses in the x direction
-        #num_y = np.random.randint(1, 4) # Number of elipses in the y directoin 
-
-        num_x = 4
-        num_y = 4
+        num_x = np.random.randint(4, 10) # Number of elipses in the x direction
+        num_y = np.random.randint(4, 10) # Number of elipses in the y directoin 
 
         #%% Delaunay and Voronoi
         fig = plt.figure()
@@ -52,14 +49,13 @@ def generate_random_ellipse_structure(number_of_images = 20000):
         for ellipse in del_ellipses:
             centroid, semi_minor, semi_major, ang = ellipse
             ellipse = Ellipse(centroid, param_2*scal*semi_major, param_3*scal*semi_minor,
-                            angle=ang, facecolor="blue", alpha=1)
+                            angle=ang, facecolor="black", alpha=1)
             ax.add_artist(ellipse)
 
         plt.xlim(np.min(pts[:,0]), np.max(pts[:,0]))
         plt.ylim(np.min(pts[:,1]), np.max(pts[:,1]))
         plt.tight_layout()
         plt.axis('off')
-        plt.show()
         ax = plt.gca()
         ax.set_xlim(0.0, 64)
         ax.set_ylim(64, 0.0)

@@ -1,8 +1,9 @@
 import numpy as np 
 import os
 #home = '/home/nathan/Desktop/Outputs/run_1_12_19_one/'
-home = '/home/nathan/Desktop/Research/ML/CNN/run_0/'
+home = '/home/nathan/Desktop/Research/Machine_Learning/CNN/test/'
 max = 0 
+fileName = ''
 
 for file in os.listdir(home):
     values = np.loadtxt(home + file)

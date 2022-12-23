@@ -25,7 +25,7 @@ from torch.utils.data import TensorDataset, DataLoader
 def runGAN(input_dir, real_output_dir):
     plt.close("all")
     # Put all output directories here
-    run_dir = '/home/nathan/Desktop/ML/outputData'
+    run_dir = '/home/nathan/Desktop/Research/Machine_Learning/DCGAN/'
     plots_dir = real_output_dir
     coordinates_dir = real_output_dir
     output_model_dir = real_output_dir 
@@ -42,7 +42,7 @@ def runGAN(input_dir, real_output_dir):
     workers = 2
 
     # Batch size during training
-    batch_size = 16
+    batch_size = 8
 
     # Spatial size of training images. All images will be resized to this
     #   size using a transformer.
@@ -61,7 +61,7 @@ def runGAN(input_dir, real_output_dir):
     ndf = 64 # Leave this value alone 
 
     # Number of training epochs
-    num_epochs = 1600  # was 75
+    num_epochs = 200  # was 75
 
     # Learning rate for optimizers
     lr = 0.0002
@@ -281,7 +281,7 @@ def runGAN(input_dir, real_output_dir):
             optimizerG.step()
 
             # Output training stats
-            if i % 50 == 0:
+            if i % 1000 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                     % (epoch, num_epochs, i, len(my_dataloader),
                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
@@ -303,9 +303,9 @@ def runGAN(input_dir, real_output_dir):
                 plt.axis("off")
                 plt.title("Fake images")
                 plt.imshow(np.transpose(img_list[-1],(1,2,0)))
-                plt.savefig("Fake_image_" + str(iters) + ".png", dpi = 1200)
+                plt.savefig("Fake_image_" + str(iters) + ".png")
             
-            if iters % 100 == 0:
+            if iters % 1000 == 0:
                 # Saving gan models
                 torch.save(netG.state_dict(),  output_model_dir + str(iters) + '.pt')
 
@@ -313,8 +313,6 @@ def runGAN(input_dir, real_output_dir):
             iters += 1
 
         print(epoch)
-        if iters > 20000:
-            break
 
 
     # Plotting the loss over the run
@@ -325,7 +323,7 @@ def runGAN(input_dir, real_output_dir):
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("Loss_during_training.png", dpi = 1200)
+    plt.savefig("Loss_during_training.png", dpi=1200)
     fig = plt.figure(figsize=(8,8))
     plt.axis("off")
     ims = [[plt.imshow(np.transpose(i,(1,2,0)), animated=True)] for i in img_list]
@@ -347,11 +345,6 @@ def runGAN(input_dir, real_output_dir):
     plt.savefig("real_vs_fake.png", dpi=1200)
     plt.close('all')
 
-    #Saving the pytorch model 
-    # torch.save(netG.state_dict(),  output_model_dir + '/gan_model.pt')
-
-runGAN('/home/nathan/Desktop/ML/inputData/4x4/color/20K', '/home/nathan/Desktop/ML/outputData/4x4/gray_2/20K_batch_8')
-runGAN('/home/nathan/Desktop/ML/inputData/4x4/color/10K', '/home/nathan/Desktop/ML/outputData/4x4/gray_2/10K_batch_8')
-runGAN('/home/nathan/Desktop/ML/inputData/4x4/color/5K', '/home/nathan/Desktop/ML/outputData/4x4/gray_2/5K_batch_8')
-runGAN('/home/nathan/Desktop/ML/inputData/4x4/color/2.5K', '/home/nathan/Desktop/ML/outputData/4x4/gray_2/2.5K_batch_8')
-runGAN('/home/nathan/Desktop/ML/inputData/4x4/color/1.25K', '/home/nathan/Desktop/ML/outputData/4x4/gray_2/1.25K_batch_8')
+input = '/home/nathan/Desktop/Research/Datasets/GAN/Input/RandxRand/'
+output = '/home/nathan/Desktop/Research/Datasets/GAN/Output/RandxRand/'
+runGAN(input, output)
