@@ -21,11 +21,11 @@ options
     {
         type            scalarSemiImplicitSource;
         selectionMode   all;
-        volumeMode      specific;
+        volumeMode      absolute;
 
         injectionRateSuSp
         {
-            h          (1e6 0); // W/m^3 == kg/m/s^3
+            h          (1 0); // W/m^3 == kg/m/s^3
         }
     }
 }
