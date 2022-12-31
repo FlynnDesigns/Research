@@ -62,7 +62,7 @@ for file in os.listdir(home):
 
         imageName  = filtered_images + number + '.jpg'
         image = skimage.io.imread(imageName)
-        imageShaped = image[4:68, 1:65]
+        imageShaped = image[5:69, 1:65]
         imageShaped = imageShaped / 255
         imageShaped = np.array(imageShaped)
         imageShaped = np.rint(imageShaped)
