@@ -55,10 +55,10 @@ forAll(mesh.C(), celli)
 {
 	//std::cout << mesh.C()[celli].component(0) << " , " << mesh.C()[celli].component(1) << std::endl;
 	// Checking to see if the y component is in bounds
-	if( mesh.C()[celli].component(1) >= 5.5 && mesh.C()[celli].component(1) <= 68.5 )
+	if( mesh.C()[celli].component(1) >= 4.5 && mesh.C()[celli].component(1) <= 68.5 )
 	{
 		// Checking to see if the x component matches
-		if( mesh.C()[celli].component(0) >= 1.5 && mesh.C()[celli].component(1) <= 64.5 )
+		if( mesh.C()[celli].component(0) >= 1.5 && mesh.C()[celli].component(0) <= 64.5 )
 		{
 			// Looping through the list of values of x and y 
 			for (size_t i = 0; i < x.size();++i)
