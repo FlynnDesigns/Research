@@ -16,7 +16,7 @@ def isfloat(num):
         return False
 
 # Default values for the program
-max_size = 0
+max_size = 90
 top_dir = " "
 home = str(os.getcwd())
 
@@ -122,14 +122,18 @@ temp_dict = list(temp_dict.values())
 # Average every 4 values 
 length = len(temp_dict)
 avg_temp = []
-sum = 0
-for i in range(0, int(length/4)):
-    for j in range(0, 4):
-        sum = sum + temp_dict[i*4 + j]
-    sum = sum / 4
-    rounded_sum = round(sum, 3)
-    avg_temp.append(rounded_sum)
-    sum = 0
+
+# With 4 levels of refinement there are now for cets of the same cell to map back...
+# This can scale 
+for i in range(0, 4884):
+    valOne = temp_dict[i]
+    valTwo = temp_dict[i + 4884]
+    valThree = temp_dict[i + 4884 * 2]
+    valFour = temp_dict[i + 4884 * 3]
+    sum = valOne + valTwo + valThree + valFour
+    sum = sum / 4 
+    sum = round(sum, 3)
+    avg_temp.append(sum)
 
 os.system("cd ..")
 with open('temp_results.txt', 'w') as f:
