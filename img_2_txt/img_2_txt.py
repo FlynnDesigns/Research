@@ -104,10 +104,16 @@ for image_name in os.listdir(images):
     current270 = np.copy(current)
     current270[5:69, 1:65] = np.rot90(current270[5:69, 1:65], -3)
 
+    # Transposing everything to get it centered correctly 
+    current = np.transpose(current)
+    current90 = np.transpose(current90)
+    current180 = np.transpose(current180)
+    current270 = np.transpose(current270)
+
     # Writing the solid coordinates file for 0
     with open(coordinates + outputName + '.txt', 'w') as f: 
-            for i in range(66):
-                for k in range(74):
+            for k in range(66):
+                for i in range(74):
                     # Applying offset to get the coordinates to the right positon 
                     x_val = k + 0.5 
                     y_val = i + 0.5 
@@ -119,8 +125,8 @@ for image_name in os.listdir(images):
     
     # Writing the solid coordinates file for 90
     with open(coordinates90 + outputName + '.txt', 'w') as f: 
-            for i in range(66):
-                for k in range(74):
+            for k in range(66):
+                for i in range(74):
                     # Applying offset to get the coordinates to the right positon 
                     x_val = k + 0.5 
                     y_val = i + 0.5 
@@ -132,8 +138,8 @@ for image_name in os.listdir(images):
     
     # Writing the solid coordinates file for 180
     with open(coordinates180 + outputName + '.txt', 'w') as f: 
-            for i in range(66):
-                for k in range(74):
+            for k in range(66):
+                for i in range(74):
                     # Applying offset to get the coordinates to the right positon 
                     x_val = k + 0.5 
                     y_val = i + 0.5 
@@ -145,8 +151,8 @@ for image_name in os.listdir(images):
 
      # Writing the solid coordinates file for 270
     with open(coordinates270 + outputName + '.txt', 'w') as f: 
-            for i in range(66):
-                for k in range(74):
+            for k in range(66):
+                for i in range(74):
                     # Applying offset to get the coordinates to the right positon 
                     x_val = k + 0.5 
                     y_val = i + 0.5 
