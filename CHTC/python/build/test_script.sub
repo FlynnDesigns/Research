@@ -1,0 +1,31 @@
+# Specify the universe (default is vanilla)
+universe = vanilla
+
+# Specify the commands for your executable
+executable = run_python.sh
+arguments = $(Process)
+
+# Python input files for img_2_txt
+transfer_input_files = http://proxy.chtc.wisc.edu/SQUID/chtc/el8/python310.tar.gz packages packages.tar.gz img_2_txt.py
+
+## Output files ##
+# Output 
+output = /home/nflynn4/hello_world/output_files/run_python_$(Cluster)_$(Process).out
+
+# Error 
+error = /home/nflynn4/hello_world/error_files/hello-chtc_$(Cluster)_$(Process).err
+
+# Log
+log = /home/nflynn4/hello_world/log_files/hello-chtc_$(Cluster).log
+
+# File transfer settings
+should_transfer_file = YES
+when_to_transfer_output = ON_EXIT
+
+# Compute resource settings
+request_cpus = 1
+request_memory = 4GB
+request_disk = 20MB
+
+# Tell HTCondor how many jobs to run 
+queue 1

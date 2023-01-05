@@ -1,0 +1,28 @@
+# Specify the universe (default is vanilla)
+universe = vanilla
+
+# Specify the commands for your executable
+executable = hello-chtc.sh
+arguments = $(Process)
+
+## Output files ##
+# Output 
+output = /home/nflynn4/hello_world/output_files/hello-chtc_$(Cluster)_$(Process).out
+
+# Error 
+error = /home/nflynn4/hello_world/error_files/hello-chtc_$(Cluster)_$(Process).err
+
+# Log
+log = /home/nflynn4/hello_world/log_files/hello-chtc_$(Cluster).log
+
+# File transfer settings
+should_transfer_file = YES
+when_to_transfer_output = ON_EXIT
+
+# Compute resource settings
+request_cpus = 1
+request_memory = 1GB
+request_disk = 1MB
+
+# Tell HTCondor how many jobs to run 
+queue 3
