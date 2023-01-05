@@ -7,6 +7,7 @@ import cv2
 
 # Default libraries
 import os
+import glob
 
 """
 This script is used to take a 66 x 74 pixel image and convert it over to a numpy array.
@@ -17,10 +18,10 @@ The script runs and saves out of the current working directory
 
 # Home directory settings: 
 home = 'A:\\Research\Research\\img_2_txt\\'
-coordinates = home + 'coordinates\\'
-coordinates90 = home + 'coordinates90\\'
-coordinates180 = home + 'coordinates180\\'
-coordinates270 = home + 'coordinates270\\'
+coordinates = home + '0\\'
+coordinates90 = home + '90\\'
+coordinates180 = home + '180\\'
+coordinates270 = home + '270\\'
 images = home + 'images\\'
 filteredImages = home + '\\filtered_images\\'
 
@@ -30,6 +31,25 @@ os.chdir(home)
 # Using base design setting for testing 
 useBaseDesign = False
 
+# Running settings 
+run = input("Would you like to run?\n This will clear all previous runs\n enter y to run:")
+if run == 'y':
+    print('Clearing old files')
+    files = glob.glob(coordinates + '*')
+    for f in files:
+        os.remove(f)
+    files = glob.glob(coordinates90 + '*')
+    for f in files:
+        os.remove(f)
+    files = glob.glob(coordinates180 + '*')
+    for f in files:
+        os.remove(f)
+    files = glob.glob(coordinates270 + '*')
+    for f in files:
+        os.remove(f)
+
+os.system('cls')
+print('Converting images to coordinates')
 # Opening the image and converting it to an array 
 for image_name in os.listdir(images):
     # Reading in each image, image by image
@@ -161,3 +181,27 @@ for image_name in os.listdir(images):
                     if current[k][i] == 1 and x_val > 0.5 and x_val < 65.5 and y_val > 4.5 and y_val< 73.5:
                         f.write("%s " % (x_val))
                         f.write("%s\n" % (y_val))
+
+# Zipping all of the files using tar and placing them into the coordinates folder
+import tarfile
+import os.path
+
+def make_tarfile(output_filename, source_dir):
+    with tarfile.open(output_filename, "w:gz") as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir)) 
+os.system('cls')
+# Zipping up the 0 degree coordinates 
+print('Zipping 0')
+make_tarfile(home + 'coordinates0.gz', home + '0//')
+
+# Zipping up the 90 degree coordinates
+print('Zipping 90')
+make_tarfile(home + 'coordinates90.gz', home + '90//')
+
+# Zipping up the 180 degree coordinates 
+print('Zipping 180')
+make_tarfile(home + 'coordinates180.gz', home + '180//')
+
+# Zipping up the 270 degree coordinates
+print('Zipping 270')
+make_tarfile(home + 'coordinates270.gz', home + '270//')
