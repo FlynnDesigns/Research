@@ -24,6 +24,7 @@ coordinates180 = home + '180\\'
 coordinates270 = home + '270\\'
 images = home + 'images\\'
 filteredImages = home + '\\filtered_images\\'
+tarFiles = 'A:\\Research\\Research\\coordinates\\'
 
 # Changing to home directory
 os.chdir(home)
@@ -190,18 +191,19 @@ def make_tarfile(output_filename, source_dir):
     with tarfile.open(output_filename, "w:gz") as tar:
         tar.add(source_dir, arcname=os.path.basename(source_dir)) 
 os.system('cls')
+
 # Zipping up the 0 degree coordinates 
 print('Zipping 0')
-make_tarfile(home + 'coordinates0.gz', home + '0//')
+make_tarfile(tarFiles + 'coordinates0.gz', home + '0//')
 
 # Zipping up the 90 degree coordinates
 print('Zipping 90')
-make_tarfile(home + 'coordinates90.gz', home + '90//')
+make_tarfile(tarFiles + 'coordinates90.gz', home + '90//')
 
 # Zipping up the 180 degree coordinates 
 print('Zipping 180')
-make_tarfile(home + 'coordinates180.gz', home + '180//')
+make_tarfile(tarFiles + 'coordinates180.gz', home + '180//')
 
 # Zipping up the 270 degree coordinates
 print('Zipping 270')
-make_tarfile(home + 'coordinates270.gz', home + '270//')
+make_tarfile(tarFiles + 'coordinates270.gz', home + '270//')
