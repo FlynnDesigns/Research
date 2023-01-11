@@ -1,42 +1,34 @@
 # Custom libraries 
 import skimage
+from PIL import Image as im
 import matplotlib.pyplot as plt 
 from numpy import asarray
 import numpy as np
 import cv2
+import pandas as pd
 
 # Default libraries
 import os
 import glob
 
-"""
-This script is used to take a 66 x 74 pixel image and convert it over to a numpy array.
-Later, the numpy array is then converted to coordinates that OpenFOAM can read and turn into a mesh.
-The script takes one input, the images name.
-The script runs and saves out of the current working directory 
-"""
-
 # Home directory settings: 
-home = 'A:\\Research\Research\\img_2_txt\\'
-coordinates = home + '0\\'
-coordinates90 = home + '90\\'
-coordinates180 = home + '180\\'
-coordinates270 = home + '270\\'
-images = home + 'images\\'
+home = 'A:\\Research\\Training data\\run_1\\'
+############################################################################
+coordinates0 = home + 'coordinates\\0\\'
+coordinates90 = home + 'coordinates\\90\\'
+coordinates180 = home + 'coordinates\\180\\'
+coordinates270 = home + 'coordinates\\270\\'
+images = home + 'images\\images\\'
 filteredImages = home + '\\filtered_images\\'
 tarFiles = 'A:\\Research\\Research\\coordinates\\'
-
-# Changing to home directory
-os.chdir(home)
-
-# Using base design setting for testing 
-useBaseDesign = False
+csvDir= home + 'csv\\'
+tarFiles = home + 'coordinates\\'
 
 # Running settings 
-run = input("Would you like to run?\n This will clear all previous runs\n enter y to run:")
+run = input("Would you like to run?\n This will clear all previous runs\n enter y to run: ")
 if run == 'y':
     print('Clearing old files')
-    files = glob.glob(coordinates + '*')
+    files = glob.glob(coordinates0 + '*')
     for f in files:
         os.remove(f)
     files = glob.glob(coordinates90 + '*')
@@ -51,6 +43,7 @@ if run == 'y':
 
 os.system('cls')
 print('Converting images to coordinates')
+
 # Opening the image and converting it to an array 
 for image_name in os.listdir(images):
     # Reading in each image, image by image
@@ -64,51 +57,44 @@ for image_name in os.listdir(images):
     current = current[:,:,0]
     current = np.array(current, dtype=np.uint8)
 
-    if useBaseDesign == True:
-        array = np.zeros((64, 64))
-        array[:, 0:2] = 1
-        array[:, 5:7] = 1
-        array[:, 9:11] = 1
-        array[:, 13:15] = 1
-        array[:, 17:19] = 1
-        array[:, 21:23] = 1
-        array[:, 25:27] = 1
-        array[:, 29:31] = 1
-        array[:, 33:35] = 1
-        array[:, 37:39] = 1
-        array[:, 41:43] = 1
-        array[:, 45:47] = 1
-        array[:, 49:51] = 1
-        array[:, 53:55] = 1
-        array[:, 57:59] = 1
-        array[:, 62:64] = 1
-        current = 256 * array
-
     # Adding fluid borders to image. If this is the correct size, it doesnt matter
     if size[0] == 64 or size[1] == 64:
         output = np.ones((74,66), dtype=np.uint8) * 255
         output[5:69, 1:65] = current
         current = output 
+    
+    # Forcing current to be uint8
+    current0 = current[5:69, 1:65]
+    current90 =  np.rot90(current0, -1)
+    current180 = np.rot90(current90, -1)
+    current270 = np.rot90(current180, -1)
 
-    # Applying filter to convert region to fluid and solid
-    for j in range(66):
-        for i in range(74):
-            if current[i,j] >= 90:
-                current[i,j] = 0
-            else:
-                current[i,j] = 1
-                
-    # Saving the image for 0 degrees 
-    skimage.io.imsave(filteredImages + image_name, 255 * current[5:69, 1:65])
+    # Splitting up image name 
+    name = os.path.splitext(image_name)[0]
+    try:
+        number = name.split('_')[0]
+    except:
+        number = name.split('_')[1]
 
+    # Saving the images for 0 degrees
+    skimage.io.imsave(filteredImages + '0_' + image_name, 255 * current0)
+    DF = pd.DataFrame(current0)
+    DF.to_csv(csvDir + '0_' + number + '.csv')
+    
     # Saving the image for 90 degrees
-    skimage.io.imsave(filteredImages + '90_' + image_name, 255 * np.rot90(current[5:69, 1:65], -1))
+    skimage.io.imsave(filteredImages + '90_' + image_name, 255 * current90)
+    DF = pd.DataFrame(current90)
+    DF.to_csv(csvDir + '90_' + number + '.csv')
 
     # Saving the image for 180 degrees
-    skimage.io.imsave(filteredImages + '180_' + image_name, 255 * np.rot90(current[5:69, 1:65], -2))
+    skimage.io.imsave(filteredImages + '180_' + image_name, 255 * current180)
+    DF = pd.DataFrame(current180)
+    DF.to_csv(csvDir + '180_' + number + '.csv')
 
     # Saving the image for 270 degrees
-    skimage.io.imsave(filteredImages + '270_' + image_name, 255 * np.rot90(current[5:69, 1:65], -3))
+    skimage.io.imsave(filteredImages + '270_' + image_name, 255 * current270)
+    DF = pd.DataFrame(current270)
+    DF.to_csv(csvDir + '270_' + number + '.csv')
 
     # Splitting up the name of the file so the correct number can be saved
     outputName = image_name.strip('.jpg')
@@ -132,7 +118,7 @@ for image_name in os.listdir(images):
     current270 = np.transpose(current270)
 
     # Writing the solid coordinates file for 0
-    with open(coordinates + outputName + '.txt', 'w') as f: 
+    with open(coordinates0 + outputName + '.txt', 'w') as f: 
             for k in range(66):
                 for i in range(74):
                     # Applying offset to get the coordinates to the right positon 
@@ -194,16 +180,15 @@ os.system('cls')
 
 # Zipping up the 0 degree coordinates 
 print('Zipping 0')
-make_tarfile(tarFiles + 'coordinates0.gz', home + '0//')
+make_tarfile(tarFiles + 'coordinates0.gz', coordinates0)
 
 # Zipping up the 90 degree coordinates
 print('Zipping 90')
-make_tarfile(tarFiles + 'coordinates90.gz', home + '90//')
+make_tarfile(tarFiles + 'coordinates90.gz', coordinates90)
 
 # Zipping up the 180 degree coordinates 
 print('Zipping 180')
-make_tarfile(tarFiles + 'coordinates180.gz', home + '180//')
-
+make_tarfile(tarFiles + 'coordinates180.gz', coordinates180)
 # Zipping up the 270 degree coordinates
 print('Zipping 270')
-make_tarfile(tarFiles + 'coordinates270.gz', home + '270//')
+make_tarfile(tarFiles + 'coordinates270.gz', coordinates270)
