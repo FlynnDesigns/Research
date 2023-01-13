@@ -59,9 +59,9 @@ totalSimulations = 200000
 #######################################################################################################################
 
 # Directory of the files you want to parse 
-home = 'A:\\Research\\Training data\\run_0\\'
+home = 'A:\\Research\\Training data\\run_1\\'
 # Directory of the paralel fin
-parallel_dir= 'A:\\Research\\Research\\get_results\\parallel\\'
+parallel_dir= 'A:\\Research\\Research\\get_results\\'
 ######################################################################################################################
 temperatures = home + 'temperatures\\'
 filtered_images = home + 'filtered_images\\'
@@ -72,8 +72,25 @@ training_dir = home + 'mat_files\\train\\'
 best_best = home + 'best_best\\'
 
 # Loading in parallel temp and layout
-parallel_temp = loadTemp(parallel_dir + 'T_parallel.txt')
-parallel_layout = csv2Array(parallel_dir + 'parallel.csv')
+parallel_temp = loadTemp(parallel_dir + 'parallel.txt')
+array = np.zeros((64, 64))
+array[:, 0:2] = 1
+array[:, 5:7] = 1
+array[:, 9:11] = 1
+array[:, 13:15] = 1
+array[:, 17:19] = 1
+array[:, 21:23] = 1
+array[:, 25:27] = 1
+array[:, 29:31] = 1
+array[:, 33:35] = 1
+array[:, 37:39] = 1
+array[:, 41:43] = 1
+array[:, 45:47] = 1
+array[:, 49:51] = 1
+array[:, 53:55] = 1
+array[:, 57:59] = 1
+array[:, 62:64] = 1
+parallel_layout = array
 
 # Plotting the base design 
 avgTempParallel = getAvgTemp(parallel_layout, parallel_temp) + 10
@@ -87,7 +104,7 @@ fileName = ''
 minTemp = 400
 maxTemp = 0
 newCount = 0
-
+    
 for file in os.listdir(temperatures):
     if file.endswith('.txt'):
         # Loading in the temperature data 
