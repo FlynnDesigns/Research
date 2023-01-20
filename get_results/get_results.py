@@ -59,43 +59,15 @@ totalSimulations = 200000
 #######################################################################################################################
 
 # Directory of the files you want to parse 
-home = 'A:\\Research\\Training data\\run_1\\'
-# Directory of the paralel fin
-parallel_dir= 'A:\\Research\\Research\\get_results\\'
+
 ######################################################################################################################
-temperatures = home + 'temperatures\\'
-filtered_images = home + 'filtered_images\\'
-csvDir = home + 'csv\\'
-full_images_dir = home + 'filtered_images\\'
-best_images_dir = home + 'best_images\\'
-training_dir = home + 'mat_files\\train\\'
-best_best = home + 'best_best\\'
+temperatures = 'D:\\Research\\0\\'
+coordinatesLoc = 'D:\\Research\\Research\\coordinates\\0\\'
+best_best ='D:\\Research\\best_best\\'
+mat_files = 'D:\\Research\\mat_files\\train\\train\\'
 
-# Loading in parallel temp and layout
-parallel_temp = loadTemp(parallel_dir + 'parallel.txt')
-array = np.zeros((64, 64))
-array[:, 0:2] = 1
-array[:, 5:7] = 1
-array[:, 9:11] = 1
-array[:, 13:15] = 1
-array[:, 17:19] = 1
-array[:, 21:23] = 1
-array[:, 25:27] = 1
-array[:, 29:31] = 1
-array[:, 33:35] = 1
-array[:, 37:39] = 1
-array[:, 41:43] = 1
-array[:, 45:47] = 1
-array[:, 49:51] = 1
-array[:, 53:55] = 1
-array[:, 57:59] = 1
-array[:, 62:64] = 1
-parallel_layout = array
-
-# Plotting the base design 
-avgTempParallel = getAvgTemp(parallel_layout, parallel_temp) + 10
-maxTempParallel = getMaxTemp(parallel_temp)  
-plot_design(parallel_layout, parallel_temp, 'Parallel Fin', best_best)
+# Peformance metric to beat 
+avgTempParallel = 313.608
 
 # Temp variables and initial values 
 count = 0
@@ -118,9 +90,17 @@ for file in os.listdir(temperatures):
         except:
             number = name.split('_')[1]
 
-        # Correcting csv file name
-        csvName = csvDir + orientation + '_' + number + '.csv'
-        designField= csv2Array(csvName)
+        design = np.zeros((74,66))
+        fileNamer = coordinatesLoc + number + ".txt"
+        coordinates = np.loadtxt(fileNamer, delimiter=" ")
+        coordinates = coordinates - 0.5
+        coordinates = np.array(coordinates, dtype=int)
+
+        for i in range (len(coordinates)):
+            x = coordinates[i, 0]
+            y = coordinates[i, 1]
+            design[y, x] = 1
+        designField = design[5:69, 1:65]
 
         # Making sure that the csv files are in the right orientation 
         maxTempTest = 0
@@ -139,35 +119,43 @@ for file in os.listdir(temperatures):
         
         # Calculating the stats of the design
         avgTemp = getAvgTemp(designField, tempField)
+        # print(avgTemp)
         maxTemp = getMaxTemp(tempField)  
         
         # Incrementing the total number of files 
         total = total + 1
+
+        if avgTemp < minTemp:
+                    minTemp = avgTemp
+                    maxTemp = np.max(tempField)
+                    fileName = file 
+                    temp = tempField
+                    design = designField
+                    plot_design(design, temp, number,  best_best)
 
         # Saving all designs better than parallel to be used in the CNN
         if avgTemp < avgTempParallel:
             if mode == 'CNN':
                 # Copying the best images 
                 newName = orientation +  '_' + number + '.jpg'
-                shutil.copyfile(full_images_dir + newName, best_images_dir + newName)
 
                 # Saving the u and F arrays into .mat files 
                 mdict = {"u": tempField, "F": designField}
                 matFileName = str(count) + '.mat'
 
                 # Creating training sets of data 
-                sci.savemat(training_dir + 'train\\' + matFileName, mdict)
-                with open(training_dir + 'train_val.txt', 'a') as fileMat:
-                    fileMat.write(matFileName + '\n')
+                # sci.savemat(training_dir + 'train\\' + matFileName, mdict)
+                # with open(training_dir + 'train_val.txt', 'a') as fileMat:
+                #     fileMat.write(matFileName + '\n')
                 
                 # Storing the design with the best performance
-                if avgTemp < minTemp:
-                    minTemp = avgTemp
-                    maxTemp = np.max(tempField)
-                    fileName = file 
-                    temp = tempField
-                    design = designField
-                    plot_design(design, temp, file,  best_best)
+                # if avgTemp < minTemp:
+                #     minTemp = avgTemp
+                #     maxTemp = np.max(tempField)
+                #     fileName = file 
+                #     temp = tempField
+                #     design = designField
+                #     plot_design(design, temp, file,  best_best)
 
             print(count)
             count = count + 1
