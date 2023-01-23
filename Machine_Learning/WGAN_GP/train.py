@@ -19,35 +19,42 @@ from tqdm import tqdm
 from utils import gradient_penalty, save_checkpoint, load_checkpoint
 from model import Discriminator, Generator, initialize_weights
 
-##
+## Libraries I have add in ##
 import torchvision.datasets as dset
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import pytorch_gan_metrics as metrics
+import torchvision.utils as vutils
 
-input_dir = 'A:\\Research\\Training data\\CNN\\run_0\\best_images\\'
+## Running directories ##
+input_dir = 'A:\\Research\\Training_data\\run_2\\fid_is\\images\\'
+stats_dir = 'A:\\Research\\Training_data\\run_2\\fid_is\\run_2_stats.npz'
+test_dir = 'A:\\Research\\Training_data\\run_2\\fid_is\\test\\'
+##
 output_model_dir = 'A:\\Research\\Research\\Machine_Learning\\WGAN_GP\\model_dir\\'
 image_dir = 'A:\\Research\\Research\\Machine_Learning\\WGAN_GP\\images\\'
 loss_dir =  'A:\\Research\\Research\\Machine_Learning\\WGAN_GP\\'
 image_size = 64
 batch_size = 128
 workers = 4
-## 
+##                  ##
+
 
 # Hyperparameters etc.
 device = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE_G = 2e-4 # was 1e-4
-LEARNING_RATE_D = 1e-4 # was 1e-4
+LEARNING_RATE_G = 1e-3 # was 1e-4
+LEARNING_RATE_D = 1e-3 # was 1e-4
 BATCH_SIZE = 64
 IMAGE_SIZE = 64
 CHANNELS_IMG = 1
-Z_DIM = 100 # was 100
-NUM_EPOCHS = 100 
+Z_DIM = 25 # was 100
+NUM_EPOCHS = 400
 FEATURES_CRITIC = 64 # was 16
 FEATURES_GEN = 64 # was 16
 CRITIC_ITERATIONS = 10 # was 5
-LAMBDA_GP = 25 # was 10
+LAMBDA_GP = 500 # was 10
 
 #######################################################################################
 # Computer / GPU settings
@@ -90,12 +97,16 @@ step = 0
 # Storing the loss values for plotting 
 loss_gen_list = []
 loss_critic_list = []
-step_list = []
+fid_score_list = []
+is_score_list = []
+epoch_list = []
 
 gen.train()
 critic.train()
 if __name__ == "__main__":  
+    epoch_num = 0
     for epoch in range(NUM_EPOCHS):
+        epoch_list.append(epoch_num)
         # Target labels not needed! <3 unsupervised
         torch.multiprocessing.freeze_support()
         for batch_idx, real in enumerate(loader, 0):
@@ -124,43 +135,72 @@ if __name__ == "__main__":
             loss_gen.backward()
             opt_gen.step()
 
-            # Print losses occasionally and print to tensorboard
-            if batch_idx % 100 == 0 and batch_idx > 0:
-                print(
-                    f"Epoch [{epoch}/{NUM_EPOCHS}] Batch {batch_idx}/{len(loader)} \
-                    Loss D: {loss_critic:.4f}, loss G: {loss_gen:.4f}")
-
-                # Adding the loss values to a list
-                loss_gen_list.append(loss_gen.cpu().detach().numpy())
-                loss_critic_list.append(loss_critic.cpu().detach().numpy())
-                step_list.append(step)
-
-                run = 0
-                with torch.no_grad():
-                    fake = gen(fixed_noise)
-                    # take out (up to) 32 examples
-                    img_grid_real = torchvision.utils.make_grid(real[:32], normalize=True)
-                    img_grid_fake = torchvision.utils.make_grid(fake[:32], normalize=True)
+        # Adding the loss values to a list
+        loss_gen_list.append(loss_gen.cpu().detach().numpy())
+        loss_critic_list.append(loss_critic.cpu().detach().numpy())
+        
+        with torch.no_grad():
+            fake = gen(fixed_noise)
+            # take out (up to) 32 examples
+            img_grid_real = torchvision.utils.make_grid(real[:32], normalize=True)
+            img_grid_fake = torchvision.utils.make_grid(fake[:32], normalize=True)
                     
-                    # Tensor board 
-                    writer_real.add_image("Real", img_grid_real, global_step=step)
-                    writer_fake.add_image("Fake", img_grid_fake, global_step=step)
+            # Tensor board 
+            writer_real.add_image("Real", img_grid_real, global_step=step)
+            writer_fake.add_image("Fake", img_grid_fake, global_step=step)
                     
-                    # Saving images 
-                    save_image(img_grid_fake,image_dir + "%d.png" % int(step + run), nrow=5, normalize=True)
+            # Saving images 
+            save_image(img_grid_fake,image_dir + "%d.png" % epoch, nrow=5, normalize=True)
 
-                    # Saving the models 
-                    torch.save(gen.state_dict(),  output_model_dir + str(int(step + run)) + '.pt')
-                    
-                
-                    
-                    run = run + 1
-                
-                # Plotting the loss
-                plt.close('All')
-                plt.plot(step_list, loss_gen_list)
-                plt.plot(step_list, loss_critic_list)
-                plt.savefig(loss_dir + 'loss.jpg')
-                plt.close('All')
+            # Saving the models 
+            torch.save(gen.state_dict(),  output_model_dir + str(epoch) + '.pt')
+            
+            # Plotting the loss
+            try:
+                os.remove(loss_dir + 'loss.jpg')
+            except:
+                print("No scores to remove")
 
-                step += 1
+            plt.plot(epoch_list, loss_gen_list)
+            plt.plot(epoch_list, loss_critic_list)
+            plt.savefig(loss_dir + 'loss.jpg')
+            plt.close()
+
+        # Generating stats for the model fid and is scores
+        count = 0
+        while count < 10000:
+            fixed_noise = torch.randn(1024, 25, 1, 1, device=device)
+            images = gen(fixed_noise)
+            for num, image in enumerate(torch.split(images, 1)):
+                vutils.save_image(image, test_dir + "{}.jpg".format(count))
+                count = count + 1
+                if count > 10000:
+                    break 
+        
+        # Calculating scores here: 
+        (IS_fake, IS_std), FID_fake = metrics.get_inception_score_and_fid_from_directory(test_dir, stats_dir)
+        fid_score_list.append(FID_fake)
+        is_score_list.append(IS_fake)
+
+        # Plotting scores here 
+        try:
+            os.remove(loss_dir + 'scores.jpg')
+        except:
+            print("No scores to remove")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.plot(epoch_list, is_score_list)
+        ax1.set_title('IS Score (Image Diversity)')
+        ax2.plot(epoch_list, fid_score_list)
+        ax2.set_title("FD Score (Image Quality)")
+        fig.savefig(loss_dir + 'scores.jpg')
+        plt.close()
+
+        # Generating visuals each epoch and saving model 
+        print(f"Epoch [{epoch}/{NUM_EPOCHS}] Batch {batch_idx}/{len(loader)}, IS: {IS_fake:.3f}, FID: {FID_fake:.3f}, Loss D: {loss_critic:.4f}, loss G: {loss_gen:.4f}")
+        
+        # Incrementing the epoch number 
+        epoch_num = epoch_num + 1
+
+
+    
