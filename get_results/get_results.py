@@ -5,12 +5,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy.io as sci
+import multiprocessing as mp 
+import skimage
 
-def csv2Array(location):
-    layout = pd.read_csv(location)
-    layout = np.array(layout, dtype=np.uint8)
-    layout = layout[:, 1:]
-    return layout
+def sig(x, k):
+    return 1 / (1 + np.exp(-k * (x - 0.5 + 0.157 - (0.3529411764705882 - 0.34))))
+
+def norm(x):
+    norm = (x - x.min()) * 2.0
+    denorm = x.max() - x.min()
+    return norm/denorm - 1.0
 
 def getMaxTemp(tempField):
     return np.max(tempField)
@@ -37,7 +41,7 @@ def plot_design(designField, tempField, name, dir):
     # Subplot 1 settings
     ax1 = plt.subplot(1,2,1)
     ax1.set_title('Density Field')
-    im1 = plt.imshow(designField, aspect='equal')
+    im1 = plt.imshow(designField, aspect='auto')
     
     # Subplot 2 settings
     ax2 = plt.subplot(1,2,2)
@@ -48,119 +52,195 @@ def plot_design(designField, tempField, name, dir):
     plt.colorbar(im2, cax=cax, orientation='vertical')
     
     # Main plot settings
-    plt.suptitle(name + '\n\n' + "Avg temp =" + str(round(avgTemp,3)) + ", Max temp =" + str(round(maxTemp,3)))
+    volfrac = np.sum(designField) / (64 * 64)
+    plt.suptitle(name + '\n\n' + "Vol frac = " + str(round(volfrac, 3)) + ", Avg temp = " + str(round(avgTemp,3)) + ", Max temp = " + str(round(maxTemp,3)))
     plt.savefig(dir + name + '.jpg', dpi = 300)
-    plt.close('all')
+    plt.close()
 
-#######################################################################################################################
-# Modes GAN, parallel, CNN
-mode = 'CNN'
-totalSimulations = 200000
-#######################################################################################################################
+def getResults(offset, process, numberOfSimsPerProcess, home, prefix, run, graph):
+    # Peformance metric to beat 
+    avgTempParallel = 313.608
 
-# Directory of the files you want to parse 
-
-######################################################################################################################
-temperatures = 'D:\\Research\\0\\'
-coordinatesLoc = 'D:\\Research\\Research\\coordinates\\0\\'
-best_best ='D:\\Research\\best_best\\'
-mat_files = 'D:\\Research\\mat_files\\train\\train\\'
-
-# Peformance metric to beat 
-avgTempParallel = 313.608
-
-# Temp variables and initial values 
-count = 0
-total = 0 
-fileName = ''
-minTemp = 400
-maxTemp = 0
-newCount = 0
+    # Temp variables and initial values 
+    count = 0
+    total = 0 
+    minTemp = 400
+    vol_frac_list = []
     
-for file in os.listdir(temperatures):
-    if file.endswith('.txt'):
-        # Loading in the temperature data 
-        tempField = loadTemp(temperatures + file)
-        
-        # Loading in the density field data 
-        name = os.path.splitext(file)[0]
-        orientation = name.split('_')[0]
+    for fileNum in range(offset, offset + numberOfSimsPerProcess):
+        file = prefix + "T_" + str(fileNum) + ".txt"
         try:
-            number = name.split('_')[2]
+            # Loading in the temperature data
+            tempField = loadTemp(home + "temperatures\\" + file)
         except:
-            number = name.split('_')[1]
+            continue
 
+        # Creating the full design domain 
         design = np.zeros((74,66))
-        fileNamer = coordinatesLoc + number + ".txt"
-        coordinates = np.loadtxt(fileNamer, delimiter=" ")
+        fullFileName = home + "coordinates\\" + prefix + str(fileNum) + ".txt"
+
+        # Loading in the coordinates 
+        coordinates = np.loadtxt(fullFileName, delimiter=" ")
         coordinates = coordinates - 0.5
         coordinates = np.array(coordinates, dtype=int)
 
-        for i in range (len(coordinates)):
-            x = coordinates[i, 0]
-            y = coordinates[i, 1]
-            design[y, x] = 1
+        # Loading in the image 
+        image = skimage.io.imread(home + "sim_images\\images\\" + str(fileNum) + ".jpg")
+        image = np.array(image)
+        image = image[:, :, 0]
+
+        # Rotating the image 
+        # if prefix == "0":
+        #     rot = 0
+        # elif prefix == "90":
+        #     rot = 1
+        # elif prefix == "180":
+        #     rot = 2
+        # elif prefix == "270":
+        #     rot = 3
+        # image = np.rot90(image, rot)
+
+        # Normalizing and applying filter 
+        # img_normal = np.copy(image)
+        # for j in range(64):
+        #     for i in range(64):
+        #         if img_normal[i,j] >= 90:
+        #             img_normal[i,j] = 0
+        #         else:
+        #             img_normal[i,j] = 1
+
+        # img_normal = 1 - img_normal
+        # img_normal = abs(img_normal)
+        # image = img_normal
+        #image = norm(image)
+        image = image / 255
+        # image = 1 - image 
+        # image = abs(image)
+        # image = sig(image, 20)
+        # image = 1 - image
+        # image = np.abs(image) 
+
         designField = design[5:69, 1:65]
 
-        # Making sure that the csv files are in the right orientation 
-        maxTempTest = 0
-        orientationCorrected = 1
-        for i in range(4):
-            designFieldTest = np.rot90(designField, i)
-       
-            # Calculating the stats of the design
-            avgTemp = getAvgTemp(designFieldTest, tempField)
-            maxTemp = getMaxTemp(tempField)  
-            if avgTemp > maxTempTest:
-                maxTempTest = avgTemp
-                orientationCorrected = i
+        # Making sure that the temperature field is oriented in the correct way 
+        # maxTempTest = 0
+        # orientationCorrected = 1
+        # for i in range(4):
+        #     designFieldTest = np.rot90(designField, i)
+            
+        #     # Calculating the stats of the design
+        #     avgTemp = getAvgTemp(designFieldTest, tempField) 
 
-        designField = np.rot90(designField, orientationCorrected)
-        
+        #     if avgTemp > maxTempTest:
+        #         maxTempTest = avgTemp
+        #         orientationCorrected = i
+
+        # designField = np.rot90(designField, orientationCorrected)
+            
         # Calculating the stats of the design
         avgTemp = getAvgTemp(designField, tempField)
-        # print(avgTemp)
-        maxTemp = getMaxTemp(tempField)  
-        
-        # Incrementing the total number of files 
+        vol_frac = np.sum(designField) / (64 * 64)
+
+        # Writing the stats to a text file 
+        with open(home + 'stats\\' + prefix + "_" + str(process) + '.txt', 'a') as f:
+            newName =str(run) + "_" + prefix + "_" + str(fileNum)
+            f.write(newName + ", " + str(avgTemp) + "\n")
+
+        # Incrementing the total number of files (used later)
         total = total + 1
 
+        # Creating and writing a mat file for each design
+        tempField = np.array(tempField, dtype=np.float32)
+        tempFieldMat = np.copy(tempField)
+        tempFieldMat = np.rot90(tempFieldMat, -2)
+
+        image = np.array(image, dtype=np.float32)
+        imageMat = np.copy(image)
+        imageMat = np.rot90(imageMat, -1)
+
+        mdict = {"u": tempFieldMat, "F": imageMat}
+        matFileName = str(run) + "_" + prefix + "_" + str(fileNum) + '.mat'
+        sci.savemat(home + 'mat_files\\train\\train\\' + matFileName, mdict)
+        # plot_design(designField, tempField, str(run) + "_" + prefix + "_" + str(fileNum), home + "best_best\\")
+        
+        image = np.transpose()
+        # Tracking the best designs
         if avgTemp < minTemp:
-                    minTemp = avgTemp
-                    maxTemp = np.max(tempField)
-                    fileName = file 
-                    temp = tempField
-                    design = designField
-                    plot_design(design, temp, number,  best_best)
+            minTemp = avgTemp # Recording the smallest temp 
+            design = designField # Recordint the best design 
 
-        # Saving all designs better than parallel to be used in the CNN
+        # Tracking the number of data points better than parallel fin 
         if avgTemp < avgTempParallel:
-            if mode == 'CNN':
-                # Copying the best images 
-                newName = orientation +  '_' + number + '.jpg'
+            vol_frac_list.append(vol_frac)
+            if graph == True:
+                plot_design(designField, tempField, str(run) + "_" + prefix + "_" + str(fileNum), home + "best_best\\")
+    
+    # Writing the volumetric data to a file 
+    # volFracs = np.array(vol_frac_list)
+    # minFracs = volFracs.min()
+    # maxFracs = volFracs.max()
+    # avgFracs = volFracs.mean()
+    # with open(home + 'vol_frac_info\\general_stats.txt', 'a') as  file:
+    #     file.write(str(round(minFracs, 3)) + ", " + str(round(maxFracs, 3)) + ", " + str(round(avgFracs, 3)) + "\n")
 
-                # Saving the u and F arrays into .mat files 
-                mdict = {"u": tempField, "F": designField}
-                matFileName = str(count) + '.mat'
+    with open(home + 'stats\\' + prefix + "_" + str(process) + '.txt', 'a') as f:
+            newName =str(run) + "_" + prefix + "_" + str(fileNum)
+            f.write(newName + ", " + str(avgTemp) + "\n")
 
-                # Creating training sets of data 
-                # sci.savemat(training_dir + 'train\\' + matFileName, mdict)
-                # with open(training_dir + 'train_val.txt', 'a') as fileMat:
-                #     fileMat.write(matFileName + '\n')
-                
-                # Storing the design with the best performance
-                # if avgTemp < minTemp:
-                #     minTemp = avgTemp
-                #     maxTemp = np.max(tempField)
-                #     fileName = file 
-                #     temp = tempField
-                #     design = designField
-                #     plot_design(design, temp, file,  best_best)
+def multiP(totalNumSimulations, home, key="", numProcesses=4, run=0, graph=False):
+    processes = numProcesses
+    number_of_sims_per_process = totalNumSimulations / processes
+    for i in range(processes):
+        offset = i * number_of_sims_per_process
+        p = mp.Process(target=getResults, args=(int(offset), int(i), int(number_of_sims_per_process), home, key, int(run), graph))
+        p.start()
+        
+if __name__ == "__main__":
+    run = 0
+    home = 'D:\\GAN\\run_' + str(run) + '\\'
+    simulations = 500000
+    threads = 20
+    graph = True
+    clean_best = True
+    clean_mat = True
+    clean_stats = True
 
-            print(count)
-            count = count + 1
+    if clean_best == True:
+        # Cleaning best best dir 
+        try:
+            shutil.rmtree(home + 'best_best\\')
+        except:
+            print("No best best to remove")
+        os.mkdir(home + 'best_best\\')
 
-# Showing stats 
-print('Best design: ', str(fileName), ', Min avg temp = ', minTemp, '\n')
-print('Total number of designs better than parallel fin:', count, '\\', total, '\n')
-print('Failed designs: ', totalSimulations - total, ' or ', 100 - round(total / totalSimulations * 100, 2) , '%')
+    if clean_mat == True:
+        # Cleaning mat files dir 
+        try:
+            shutil.rmtree(home + 'mat_files\\')
+        except:
+            print("No mat files to remove!")
+        os.mkdir(home + 'mat_files\\')
+        os.mkdir(home + 'mat_files\\train\\')
+        os.mkdir(home + 'mat_files\\train\\train\\')
+
+    if clean_stats == True:
+        # Cleaning stats file dir 
+        try: 
+            shutil.rmtree(home + "stats\\")
+        except:
+            print("No stats file dir to remove")
+        os.mkdir(home + "stats\\")
+
+    multiP(simulations, home, "", threads, run, graph)
+
+    # # Running for 0
+    # multiP(simulations, home, "0", threads, run, graph)
+
+    # # Running for 90
+    # multiP(simulations, home, "90", threads, run, graph)
+
+    # # Running for 180
+    # multiP(simulations, home, "180", threads, run, graph)
+
+    # # Running for 270
+    # multiP(simulations, home, "270", threads, run, graph)
