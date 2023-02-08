@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from torch.autograd import Variable
 import torch.optim as optim
 import random
+import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
@@ -24,12 +25,13 @@ import configargparse
 from src.LayoutDeepRegression import Model
 ###################################################################################################################
 def main(hparams):
-    # # Fixing the seed 
-    # seed = hparams.seed
-    # np.random.seed(seed)
-    # torch.manual_seed(seed)
-    # cudnn.deterministic = True
-    
+    # Cleaning up dir 
+    try:
+        shutil.rmtree("D:\\godMode")
+    except:
+        print("No dir to remove")
+    os.mkdir('D:\\godMode')
+
     # Loading CNN model 
     UNET = Model(hparams).cuda()
     model_path = os.path.join(f'lightning_logs/version_' +
@@ -37,9 +39,9 @@ def main(hparams):
     ckpt = list(Path(model_path).glob("*.ckpt"))[0]
     print(ckpt)
 
-    model = UNET.load_from_checkpoint(str(ckpt), hparams = hparams)
-    model.eval()
-    model.cuda()
+    UNET = UNET.load_from_checkpoint(str(ckpt), hparams = hparams)
+    UNET.eval()
+    UNET.cuda()
 
     # GAN model settings 
     parser = argparse.ArgumentParser()
@@ -47,7 +49,7 @@ def main(hparams):
                         help='disabled|standard|stochastic')
     parser.add_argument('--z_distribution', default='uniform',
                         help='uniform | normal')
-    parser.add_argument('--nz', type=int, default=25,
+    parser.add_argument('--nz', type=int, default=100,
                         help='size of the latent z vector')
     parser.add_argument('--nc', type=int, default=1,
                         help='number of channels in the generated image')
@@ -73,12 +75,13 @@ def main(hparams):
     opt = parser.parse_args()
     print(opt)
 
+    
     # Initializing the GAN ############################################################################### 
     # GAN settings 
-    channels_noise = 25
+    channels_noise = 100
     channels_img = 1
     features_g = 64
-    model_name = 'A:\\Research\\Research\\Machine_Learning\\WGAN_GP\\best_100\\model_dir\\99.pt'
+    model_name = 'D:\\GAN\\run_0\\GAN_models\\70.pt'
     ngpu = 1
     
     # Loading the model onto the gpu 
@@ -143,28 +146,18 @@ def main(hparams):
     # transfer to gpu
     netG.cuda() 
 
-    # Inverse Design settings 
-    clip = 'stochastic'
-    assert clip in ['disabled', 'standard', 'stochastic']
-
-    # loss metrics
-    mse_loss = nn.SmoothL1Loss()
-    mse_loss.cuda()
-
     # Generating the design from latent variable Z
-    z_approx = torch.randn(1, 25, 1, 1, device=device)
+    z_approx = torch.randn(1, 100, 1, 1, device=device)
     
     # z_approx = Variable(z_approx)
     z_approx.requires_grad = True
 
     # optimizer
     # optimizer_approx = optim.Adam([z_approx], lr=opt.lr, betas=(opt.beta1, 0.999))
-    optimizer_approx = optim.Adam([z_approx], lr=0.01, betas=(opt.beta1, 0.999))
+    optimizer_approx = optim.SGD([z_approx], lr=0.05) # betas=(opt.beta1, 0.999))
 
     # Running optimization 
-    # torch.random.set_rng_state(torch.ByteTensor([148,130,74]))
-    # torch.random.manual_seed(1)
-    minAvgTemp = 400
+    count = 0
     for i in range(opt.niter):
         # Generating the design from the generator 
         design = netG(z_approx)
@@ -175,15 +168,9 @@ def main(hparams):
         design = design / (design.max(1, keepdim=True)[0])
         design = design.view(1, 1, 64, 64)
 
-        # Applying the sigmoid filter
-        k = 100 
-        design = 1 / (1 + torch.exp(-k * (design - 0.5)))
-        design = 1 - design
-        
         # Prediciting the heat for the design 
-        heat_pre_raw = UNET(design) 
-        heat_pre = heat_pre_raw * 100 + 297
-        
+        heat_pre = UNET(design) 
+        heat_pre = heat_pre * 100 + 297
 
         # Applying the loss function 
         heat_mass = torch.mul(heat_pre, design)
@@ -192,15 +179,41 @@ def main(hparams):
         print("Loss = ", mse_g_z)
         ree = torch.clone(mse_g_z)
 
-        with open("A://godMode//ree.txt", 'a') as file:
+        # Writing the loss to a txt file 
+        with open("D://godMode//ree.txt", 'a') as file:
             file.write(str(ree.detach().cpu().numpy()) + "\n")
 
         # Updating the optimizer
         optimizer_approx.zero_grad()
         mse_g_z.backward()
-        optimizer_approx.step() 
+        optimizer_approx.step()
 
-        vutils.save_image(design, 'A://godMode//design' + str(i) + '.png')
+        # Plotting the design and the temp field
+        design_plot = torch.clone(design)
+        design_plot = design_plot.detach().cpu().numpy()
+        design_plot = design_plot[0, 0, :, :]
+
+        heat_pre_plot = torch.clone(heat_pre)
+        heat_pre_plot = heat_pre_plot.detach().cpu().numpy()
+        heat_pre_plot = heat_pre_plot[0, 0, :, :]
+
+
+        # ax1 = plt.subplot(1,3,1)
+        # ax1.set_title('Design')
+        # ax1.axis('off')
+        # plt.imshow(design_plot, aspect='equal')
+            
+        # # Subplot 2 settings
+        # ax2 = plt.subplot(1,3,2)
+        # ax2.set_title('Temp filed')
+        # ax2.axis('off')
+        # plt.imshow(heat_pre_plot, aspect='equal')
+        # plt.savefig('D:\\godMode\\plot' + str(count) + '.png', dpi=300)
+        # plt.close()
+
+        # vutils.save_image(design, 'D://godMode//design' + str(count) + '.png', normalize=True)
+        # vutils.save_image(heat_pre, 'D://godMode//heat' + str(count) + '.png', normalize=True)
+        count = count + 1
 
         # PLotting 
         # loss = torch.clone(mse_g_z)
@@ -267,11 +280,3 @@ def main(hparams):
             # mse_g_z.backward()
             # optimizer_approx.step() 
 
-        # clipping
-        # if clip == 'standard':
-        #     z_approx.data[z_approx.data > 1] = 1
-        #     z_approx.data[z_approx.data < -1] = -1
-        # if clip == 'stochastic':
-        #     z_approx.data[z_approx.data > 1] = random.uniform(-1, 1)
-        #     z_approx.data[z_approx.data < -1] = random.uniform(-1, 1)
-        
