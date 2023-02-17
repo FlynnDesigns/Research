@@ -17,6 +17,23 @@ import configargparse
 from src.LayoutDeepRegression import Model
 
 
+def solidFilter(current):
+    for j in range(64):
+        for i in range(64):
+            if current[i,j] >= 255 - 90:
+                current[i,j] = 1
+            else:
+                current[i,j] = 0
+    return current
+
+def getAvgTemp(designField, tempField):
+    designField = solidFilter(designField * 255)
+    numSolidPixels = np.sum(designField)
+    solidTemps = np.multiply(designField, tempField)
+    totalSolidTemp = np.sum(solidTemps)
+    avgTemp = totalSolidTemp / numSolidPixels
+    return avgTemp
+
 def main(hparams):
     model = Model(hparams).cuda()
 
@@ -44,6 +61,7 @@ def main(hparams):
 
     count = 0
     avg = 0
+    ree = [] 
     with open(file_path, 'r') as fp:
         for line in fp.readlines():
             # Incrementing count 
@@ -61,14 +79,15 @@ def main(hparams):
             grid_y = np.linspace(0, 0.1, num=64)
             X, Y = np.meshgrid(grid_x, grid_y)
 
-            plt.subplot(131)
+            ax1 = plt.subplot(1, 3, 1)
             plt.title('Heat Source Layout')
-            layout_ree = np.copy(layout)# Added this in NF 01-28-22
-            # layout_ree = np.rot90(layout_ree, -1) # Added this in NF 01-28-22
-            im = plt.pcolormesh(X, Y, layout_ree) ## Added this in NF 01-28-22
+            layoutTemp = np.rot90(layout, 2)
+            im = plt.pcolormesh(X, Y, layoutTemp) 
+            ax1.axis('off')
             plt.colorbar(im)
             fig.tight_layout(w_pad=3.0)
 
+            design = np.copy(layout)
             layout = torch.Tensor(layout).unsqueeze(0).unsqueeze(0).cuda()
            
             print(layout.size())
@@ -80,32 +99,43 @@ def main(hparams):
    
             mae_test.append(mae.item())
             heat_pre = heat_pre.squeeze(0).squeeze(0).cpu().numpy() * 100.0 + 297
-            # heat_pre = np.rot90(heat_pre, -2) # Added this in NF 01-28-22
             hmax = max(np.max(heat_pre), np.max(u_true))
             hmin = min(np.min(heat_pre), np.min(u_true))
-            # u_true = np.rot90(u_true, -2) # Added this in NF 01-28-22
 
-            plt.subplot(132)
-            plt.title('Real Temperature Field')
+            # Avg solid temperatures 
+            pre_avg_solid_temp = round(getAvgTemp(design, heat_pre), 3)
+            avg_solid_temp = round(getAvgTemp(design, u_true), 3)
+            ree.append(abs(pre_avg_solid_temp-avg_solid_temp))
+            print("AVG ERROR = ", np.mean(ree))
+
+            ax2 = plt.subplot(1, 3, 2)
+            plt.title('Real Temperature Field\n' + 'Avg solid temp: ' + str(pre_avg_solid_temp))
+            u_true = np.rot90(u_true, 2)
             if "xs" and "ys" in data.keys():
                 xs, ys = data["xs"], data["ys"]
                 im = plt.pcolormesh(xs, ys, u_true, vmin=hmin, vmax=hmax)
                 plt.axis('equal')
             else:
                 im = plt.pcolormesh(X, Y, u_true, vmin=hmin, vmax=hmax)
+            ax2.axis('off')
             plt.colorbar(im)
 
-            plt.subplot(133)
-            plt.title('Predicted Temperature Field')
+            ax3 = plt.subplot(1, 3, 3)
+            plt.title('Predicted Temperature Field\n' + 'Avg solid temp: ' + str(avg_solid_temp))
+            heat_pre = np.rot90(heat_pre, 2)
             if "xs" and "ys" in data.keys():
                 xs, ys = data["xs"], data["ys"]
                 im = plt.pcolormesh(xs, ys, heat_pre, vmin=hmin, vmax=hmax)
                 plt.axis('equal')
+                plt.axis('off')
             else:
                 im = plt.pcolormesh(X, Y, heat_pre, vmin=hmin, vmax=hmax)
+            ax3.axis('off')
             plt.colorbar(im)
 
+
             save_name = os.path.join('outputs/predict_plot', os.path.splitext(os.path.basename(path))[0]+'.jpg')
+            plt.tight_layout()
             fig.savefig(save_name, dpi=300)
             plt.close()
 

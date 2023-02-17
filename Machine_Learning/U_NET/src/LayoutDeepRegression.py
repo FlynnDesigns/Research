@@ -160,6 +160,9 @@ class Model(LightningModule):
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
         self.log("val/val_mae", val_loss_mean.item() * self.hparams.std_heat)
+        # myDir = 'A:\\Research\\Research\\Machine_Learning\\U_NET\\loss.txt'
+
+
 
     def test_step(self, batch, batch_idx):
         layout, heat = batch
