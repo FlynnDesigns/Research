@@ -6,7 +6,7 @@ Usage:
 
 @author: gongzhiqiang
 @contact: gongzhiqiang@alumni.sjtu.edu.cn
-
+ 
 @version: 1.0
 @file: main.py
 @time: 2020-12-22
@@ -35,7 +35,7 @@ def main():
     parser.add_argument("--max_epochs", default=100, type=int)
     parser.add_argument("--lr", default="0.01", type=float)
     parser.add_argument("--resume_from_checkpoint", type=str, help="resume from checkpoint")
-    parser.add_argument("--num_workers", default=2, type=int, help="num_workers in DataLoader")
+    parser.add_argument("--num_workers", default=4, type=int, help="num_workers in DataLoader")
     parser.add_argument("--seed", type=int, default=1, help="seed")
     parser.add_argument("--use_16bit", type=bool, default=False, help="use 16bit precision")
     parser.add_argument("--profiler", action="store_true", help="use profiler")
@@ -45,7 +45,7 @@ def main():
                         help="how often within one training epoch to check the validation set")
 
     # args for testing
-    parser.add_argument("--test_check_num", default='70', type=str, help="checkpoint for test")
+    parser.add_argument("--test_check_num", default='87', type=str, help="checkpoint for test")
     parser.add_argument("--test_args", action="store_true", help="print args")
 
     # args from Model
