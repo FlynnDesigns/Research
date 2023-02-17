@@ -9,14 +9,14 @@ model_name: UNet # choose from FPN, FCN, SegNet, UNet
 backbone: VGG # choose from AlexNet, VGG, ResNet18, ResNet50, ResNet101
 
 # dataset path
-data_root: samples\data\
-boundary: mat_files_sig_filter # choose from rm_wall, one_point, all_walls
+data_root: samples/data/
+boundary: mat_files_270Gan_50True # choose from rm_wall, one_point, all_walls
 
 # train/val set
-train_list: train\train_val.txt
+train_list: train/train_val.txt
 
 # test set
-test_list: test\test_val.txt
+test_list: test/test_val.txt
 
 # metric for testing
 ## choose from "mae_global", "mae_boundary", "mae_component","mape_global"
