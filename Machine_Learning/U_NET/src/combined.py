@@ -52,7 +52,11 @@ def main(hparams):
     parser.add_argument('--batchSize', type=int, default=1, help='batch optimization size')
     parser.add_argument('--nc', type=int, default=1, help='number of channels in the generated image')
     parser.add_argument('--ngf', type=int, default=64)
+<<<<<<< HEAD
     parser.add_argument('--niter', type=int, default=5000, help='number of epochs to train for')
+=======
+    parser.add_argument('--niter', type=int, default=1000, help='number of epochs to train for')
+>>>>>>> bf512b7dc8e0a664f493671cb7dc342b91a0b6f3
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate, default=0.0002')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
@@ -108,7 +112,11 @@ def main(hparams):
     for param in netG.parameters():
         param.requires_grad = False
 
+<<<<<<< HEAD
     for iter_design in range(1):
+=======
+    for iter_design in range(100):
+>>>>>>> bf512b7dc8e0a664f493671cb7dc342b91a0b6f3
         ## Stats bar ##
         pbar = tqdm(range(opt.niter), desc='', ncols=100)
 
