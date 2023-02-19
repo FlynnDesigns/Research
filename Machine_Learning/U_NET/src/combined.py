@@ -6,6 +6,7 @@ from torchmetrics import MeanAbsolutePercentageError
 from torch.backends import cudnn
 import pytorch_lightning as pl
 ## 
+from torch.distributions import normal
 from torch.autograd import Variable
 import torch.optim as optim
 import random
@@ -18,11 +19,14 @@ import argparse
 import os
 import sklearn
 from sklearn import preprocessing
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-##s
+os.environ['KMP_DUPLICATE_LIB_OK']='True' 
+from tqdm import tqdm
+import pandas as pd 
+##
 from pathlib import Path
 import configargparse
 from src.LayoutDeepRegression import Model
+import skimage
 ###################################################################################################################
 def main(hparams):
     # Cleaning up dir 
@@ -33,59 +37,37 @@ def main(hparams):
     os.mkdir('D:\\godMode')
 
     # Loading CNN model 
+    ckpt = 'A:\\Research\\Research\\Machine_Learning\\U_NET\\lightning_logs\\version_81\\checkpoints\\epoch=78-step=246875.ckpt'
+    
     UNET = Model(hparams).cuda()
-    model_path = os.path.join(f'lightning_logs/version_' +
-                              hparams.test_check_num, 'checkpoints/')
-    ckpt = list(Path(model_path).glob("*.ckpt"))[0]
-    print(ckpt)
-
     UNET = UNET.load_from_checkpoint(str(ckpt), hparams = hparams)
     UNET.eval()
     UNET.cuda()
 
     # GAN model settings 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--clip', default='stochastic',
-                        help='disabled|standard|stochastic')
-    parser.add_argument('--z_distribution', default='uniform',
-                        help='uniform | normal')
-    parser.add_argument('--nz', type=int, default=100,
-                        help='size of the latent z vector')
-    parser.add_argument('--nc', type=int, default=1,
-                        help='number of channels in the generated image')
+    parser.add_argument('--clip', default='stochastic', help='disabled|standard|stochastic')
+    parser.add_argument('--z_distribution', default='uniform', help='uniform | normal')
+    parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
+    parser.add_argument('--batchSize', type=int, default=1, help='batch optimization size')
+    parser.add_argument('--nc', type=int, default=1, help='number of channels in the generated image')
     parser.add_argument('--ngf', type=int, default=64)
-    parser.add_argument('--niter', type=int, default=50000,
-                        help='number of epochs to train for')
-    parser.add_argument('--lr', type=float, default=0.1,
-                        help='learning rate, default=0.0002')
-    parser.add_argument('--beta1', type=float, default=0.5,
-                        help='beta1 for adam. default=0.5')
+    parser.add_argument('--niter', type=int, default=5000, help='number of epochs to train for')
+    parser.add_argument('--lr', type=float, default=0.1, help='learning rate, default=0.0002')
+    parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
-    parser.add_argument('--ngpu', type=int, default=1,
-                        help='number of GPUs to use')
-    parser.add_argument('--netG', default='dcgan_out/netG_epoch_10.pth',
-                        help="path to netG (to continue training)")
-    parser.add_argument('--outf', default='dcgan_out',
-                        help='folder to output images and model checkpoints')
-    parser.add_argument('--manualSeed', type=int, help='manual seed')
-    parser.add_argument('--profile', action='store_true',
-                        help='enable cProfile')
+    parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
+    parser.add_argument('--netG', default='dcgan_out/netG_epoch_10.pth', help="path to netG (to continue training)")
+    parser.add_argument('--outf', default='dcgan_out', help='folder to output images and model checkpoints')
+    parser.add_argument('--manualSeed', type=int, help='manu    al seed')
+    parser.add_argument('--profile', action='store_true', help='enable cProfile')
 
     # Printing out user arguments 
     opt = parser.parse_args()
     print(opt)
 
-    
     # Initializing the GAN ############################################################################### 
-    # GAN settings 
-    channels_noise = 100
-    channels_img = 1
-    features_g = 64
     model_name = 'D:\\GAN\\run_0\\GAN_models\\70.pt'
-    ngpu = 1
-    
-    # Loading the model onto the gpu 
-    device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
     
     # WGAN Generator  
     class Generator(nn.Module):
@@ -103,7 +85,6 @@ def main(hparams):
             # Output: N x channels_img x 64 x 64
             nn.Tanh(),
         )
-
         def _block(self, in_channels, out_channels, kernel_size, stride, padding):
             return nn.Sequential(
                 nn.ConvTranspose2d(
@@ -120,163 +101,83 @@ def main(hparams):
         def forward(self, x):
             return self.net(x)
 
-    netG = Generator(channels_noise, channels_img, features_g).to(device)
+    netG = Generator(opt.nz, opt.nc, opt.ngf)
     netG.load_state_dict(torch.load(model_name))
+    netG.cuda() 
 
     for param in netG.parameters():
         param.requires_grad = False
 
-    #######################################################################################################
-    # Desired temperature field 
-    heat = torch.ones(64,64) * 400
-    heat = (heat - 297) / 100
-    heat = heat.unsqueeze(0)
-    heat = heat.unsqueeze(0)
-    heat = heat.cuda()
+    for iter_design in range(1):
+        ## Stats bar ##
+        pbar = tqdm(range(opt.niter), desc='', ncols=100)
 
-    # Storing for heat
-    # z = torch.FloatTensor(1, opt.nz, 1, 1).normal_(0, 1)
-    # z = Variable(z)
-    # z.data.resize_(1, opt.nz, 1, 1)
-    # z = z.cuda()
-    try:
-        os.remove("A:\\godMode\\ree.txt")
-    except:
-        print("Nothing to remove~")
-    # transfer to gpu
-    netG.cuda() 
+        # Generating the design from latent variable Z
+        # torch.manual_seed(3)
+        z_approx = torch.rand(opt.batchSize, opt.nz, 1, 1).cuda()
+        z_approx = Variable(z_approx)
+        z_approx.requires_grad = True
 
-    # Generating the design from latent variable Z
-    z_approx = torch.randn(1, 100, 1, 1, device=device)
-    
-    # z_approx = Variable(z_approx)
-    z_approx.requires_grad = True
+        ## optimizer ##
+        optimizer_approx = optim.ASGD([z_approx], lr=0.0009)
 
-    # optimizer
-    # optimizer_approx = optim.Adam([z_approx], lr=opt.lr, betas=(opt.beta1, 0.999))
-    optimizer_approx = optim.SGD([z_approx], lr=0.05) # betas=(opt.beta1, 0.999))
+        base_temp = 330
+        for iter in pbar:
+            # Generating the design from the generator 
+            design = netG(z_approx)
 
-    # Running optimization 
-    count = 0
-    for i in range(opt.niter):
-        # Generating the design from the generator 
-        design = netG(z_approx)
-
-        # Normalizing the data between 0 and 1 and then scaling to 255 
-        design = design.view(design.size(0), -1)
-        design = design - design.min(1, keepdim=True)[0]
-        design = design / (design.max(1, keepdim=True)[0])
-        design = design.view(1, 1, 64, 64)
-
-        # Prediciting the heat for the design 
-        heat_pre = UNET(design) 
-        heat_pre = heat_pre * 100 + 297
-
-        # Applying the loss function 
-        heat_mass = torch.mul(heat_pre, design)
-        heat_mass = torch.sum(heat_mass)
-        mse_g_z = heat_mass / torch.sum(design)
-        print("Loss = ", mse_g_z)
-        ree = torch.clone(mse_g_z)
-
-        # Writing the loss to a txt file 
-        with open("D://godMode//ree.txt", 'a') as file:
-            file.write(str(ree.detach().cpu().numpy()) + "\n")
-
-        # Updating the optimizer
-        optimizer_approx.zero_grad()
-        mse_g_z.backward()
-        optimizer_approx.step()
-
-        # Plotting the design and the temp field
-        design_plot = torch.clone(design)
-        design_plot = design_plot.detach().cpu().numpy()
-        design_plot = design_plot[0, 0, :, :]
-
-        heat_pre_plot = torch.clone(heat_pre)
-        heat_pre_plot = heat_pre_plot.detach().cpu().numpy()
-        heat_pre_plot = heat_pre_plot[0, 0, :, :]
-
-
-        # ax1 = plt.subplot(1,3,1)
-        # ax1.set_title('Design')
-        # ax1.axis('off')
-        # plt.imshow(design_plot, aspect='equal')
+            # New filtering technique
+            design = design.squeeze(0)
+            design = design * 255 
+            design = design + 0.5 
+            design = design.clamp_(0, 255)
+            design = design / 255
+            if opt.batchSize == 1:
+                design = design.unsqueeze(0)
             
-        # # Subplot 2 settings
-        # ax2 = plt.subplot(1,3,2)
-        # ax2.set_title('Temp filed')
-        # ax2.axis('off')
-        # plt.imshow(heat_pre_plot, aspect='equal')
-        # plt.savefig('D:\\godMode\\plot' + str(count) + '.png', dpi=300)
-        # plt.close()
+            # Prediciting the heat for the design 
+            heat_pre = UNET(design) 
+            heat_pre = heat_pre * 100 + 297
 
-        # vutils.save_image(design, 'D://godMode//design' + str(count) + '.png', normalize=True)
-        # vutils.save_image(heat_pre, 'D://godMode//heat' + str(count) + '.png', normalize=True)
-        count = count + 1
+            # Loss function and optimizer 
+            design_filtered = torch.clone(design) * 255
+            design_filtered[design_filtered < 90] = 0
+            design_filtered[design_filtered >= 90] = 1
+            avg_temp_approx = (torch.mul(heat_pre, design_filtered).sum() / design_filtered.sum()).mean()
+            avg_temp_approx_cpu = np.around(avg_temp_approx.detach().cpu().numpy(), 3)
 
-        # PLotting 
-        # loss = torch.clone(mse_g_z)
-        # loss = loss.detach().cpu().numpy()
-        # if loss < minAvgTemp:
-        #     minAvgTemp = loss
-        #     print(loss)
-        #     vutils.save_image(heat_pre,  'A://godMode//heat_pre' + str(i) + '.png', normalize=True)
-        #     vutils.save_image(design,  'A://godMode//design' + str(i) + '.png')
-        
-        # with open('A://godMode//ree.txt', 'a') as ree:
-            # ree.write(str(loss) + "\n")
-    
-        # total_solid_pixels = torch.sum(design)
-        # heat_array = torch.mul(temp_heat_pre, design)
-        # heat_sum = torch.sum(heat_array)
-        # avg_solid_temp = torch.clone(heat_sum / total_solid_pixels)
-        # avg_solid_temp = avg_solid_temp.detach().cpu().numpy()
+            if avg_temp_approx_cpu < base_temp:
+                base_temp = avg_temp_approx_cpu
+                best_design = torch.clone(design_filtered)
+                best_heat = torch.clone(heat_pre)
 
-        # # Metric to store lowest temp 
-        # if avg_solid_temp < minAvgTemp:
-        #     minAvgTemp = avg_solid_temp
-        #     print(avg_solid_temp, ", i = ", str(i))
+            with open("D:\\godMode\\plot.txt", "a") as file:
+                file.write(str(avg_temp_approx_cpu) + "\n")
+            pbar.set_description("Approx avg temp solid = " + str(avg_temp_approx_cpu))
 
-        # Applying heaviside filter 
-        # design[design >= 100] = 0
-        # design[design != 0] = 1
-        # total_solid_pixels = torch.sum(design)
-        # heat_array = torch.mul(heat_pre, z_approx)
-
-        # vutils.save_image(design,  'A://godMode//design' + str(i) + '.png', normalize=True)
-
-        # total_solid_pixels = torch.sum(z_approx)
-        # heat_array = torch.mul(heat_pre, z_approx)
-        # heat_sum = torch.sum(heat_array)
-        # avg_solid_temp = torch.clone(heat_sum / total_solid_pixels)
-        # avg_solid_temp = avg_solid_temp.detach().cpu().numpy()
-
-        # # Metric to store lowest temp 
-        # if avg_solid_temp < minAvgTemp:
-        #     minAvgTemp = avg_solid_temp
-        #     print(avg_solid_temp, ", i = ", str(i))
-        #     vutils.save_image(z_approx,  'A://godMode//' + str(avg_solid_temp) + '.png', normalize=True)
-
-
-        # Updating the calulating the error and updating z
-        # g_z_approx = netG(z_approx)
-        # g_z = netG(z)
-
-        # g_z.data = heat.data
-        # g_z_approx.data = heat_pre_raw.data
-        
-        # Loss calculation here 
-        # mse_g_z = mse_loss(heat_pre, heat) - (200/8000) * torch.sum(z_approx)
-        
-        
-        # print("[Iter {}] mse_g_z: {}".format(i, mse_g_z.item()))
-        # if i % 1000 == 0:
-        #     print("[Iter {}] mse_g_z: {}".format(i, mse_g_z.item()))
-        #         vutils.save_image(heat_pre,  'A://godMode//g_z_approx' + str(i) + '.png', normalize=True)
+            # Updating the optimizer
+            optimizer_approx.zero_grad()
+            avg_temp_approx.backward()
+            optimizer_approx.step()
             
-        #     # Updating the optimizer
-            # optimizer_approx.zero_grad()
-            # mse_g_z.backward()
-            # optimizer_approx.step() 
+            # Saving the first iteration's design
+            # if iter == 0:
+            #     for iter in range(opt.batchSize):
+            temp_plot = heat_pre[0, 0, :, :].detach().cpu().numpy()
+            design_plot = design_filtered[0, 0, :, :].detach().cpu().numpy()
 
+            if iter % 50 == 0:
+                avg_temp = np.around(np.sum(np.multiply(temp_plot, design_plot)) / np.sum(design_plot), 3)
+                DF = pd.DataFrame(design_plot)
+                DF.to_csv("D:\\godMode\\" + str(int(iter/50)) + ".csv", header=False, index=False)
+                with open("D:\\godMode\\predicted_temp.txt", "a") as f:
+                    f.write(f"Design: {int(iter/50)}, Temp: {avg_temp:.3f}\n")
+
+        # Plotting and saving all designs 
+        # design_plot = best_design[0, 0, :, :].detach().cpu().numpy()
+        # temp_plot = best_heat[0, 0, :, :].detach().cpu().numpy()
+        # avg_temp = np.around(np.sum(np.multiply(temp_plot, design_plot)) / np.sum(design_plot), 3)
+        # DF = pd.DataFrame(design_plot)
+        # DF.to_csv("D:\\godMode\\" + str(iter_design + 100) + ".csv", header=False, index=False)
+        # with open("D:\\godMode\\predicted_temp.txt", "a") as f:
+        #     f.write(f"Design: {iter_design + 100}, Temp: {avg_temp:.3f}\n")

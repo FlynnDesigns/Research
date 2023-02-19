@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--config", is_config_file=True, default=False, help="config file path")
 
     # mode
-    parser.add_argument("-m", "--mode", type=str, default="train", help="model: train, test, plot, or combined")
+    parser.add_argument("-m", "--mode", type=str, default="combined", help="model: train, test, plot, or combined")
 
     # args for training
     parser.add_argument("--gpus", type=int, default=1, help="how many gpus")
@@ -45,7 +45,7 @@ def main():
                         help="how often within one training epoch to check the validation set")
 
     # args for testing
-    parser.add_argument("--test_check_num", default='87', type=str, help="checkpoint for test")
+    parser.add_argument("--test_check_num", default='81', type=str, help="checkpoint for test")
     parser.add_argument("--test_args", action="store_true", help="print args")
 
     # args from Model
