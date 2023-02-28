@@ -51,6 +51,7 @@ def make_tarfile(output_filename, source_dir):
 def convertImagesToTxt(number_of_images, offset, home):
     # Converting raw_images to coordinates 
     for k in range(number_of_images):
+
         # Assigning output location 
         fileNumber = k + offset
         if fileNumber >= 0 and fileNumber <= 49999:
@@ -84,60 +85,35 @@ def convertImagesToTxt(number_of_images, offset, home):
         elif fileNumber >= 700000 and fileNumber <= 749999:
             save_dir = home + 'coordinates\\set_14\\' 
 
-        # Reading in each image, image by image
-        image = skimage.io.imread(home + "images\\images\\" + str(fileNumber) + ".jpg")
-        original = asarray(image) 
-        current = np.copy(original)
+        # Reading in each design
+        design = np.loadtxt(f"{home}images\\images\\{fileNumber}.jpg")
+        design = design * 255
 
-        # Resizing the image to 64 x 64 if it is not the correct size 
-        current = cv2.resize(current, dsize=(64,64),  interpolation=cv2.INTER_CUBIC)
-        size = current.shape
-        try:
-            current = current[:,:,0]
-        except:
-            pass
-        current = np.array(current, dtype=np.uint8)
-
-        # Adding fluid borders to image. If this is the correct size, it doesnt matter
-        if size[0] == 64 or size[1] == 64:
-            output = np.ones((74,66), dtype=np.uint8) * 255
-            output[5:69, 1:65] = current
-            current = np.copy(output) 
+        # Adding fluid borders to the design 
+        full_domain = np.ones((74,66), dtype=np.uint8) * 255
+        full_domain[5:69, 1:65] = design
 
         # Before inverting 
         for j in range(66):
             for i in range(74):
-                if current[i,j] < 90:
-                    current[i,j] = 0
+                if full_domain[i,j] < 90:
+                    full_domain[i,j] = 0
                 else:
-                    current[i,j] = 1
-        
-        # Rotating the bounds of the image 
-        current0 = current[5:69, 1:65]
-
-        # Splitting up the name of the file so the correct number can be saved
-        outputName = str(fileNumber)
+                    full_domain[i,j] = 1
 
         # Rotating current coordinates so that they show up correctly 
-        current[5:69, 1:65] = np.rot90(current[5:69, 1:65], 3)
+        full_domain[5:69, 1:65] = np.rot90(full_domain[5:69, 1:65], 3)
 
         # Transposing everything to get it centered correctly 
-        current0 = np.transpose(current)
+        full_domain = np.transpose(full_domain)
 
         # Writing the solid coordinates file for 0, 90, 180, 270
-        createCoordinates(current0, save_dir + outputName + '.txt')
+        createCoordinates(full_domain, f"{save_dir}{fileNumber}.txt")
 
-def multiP_img_2_txt(totalNumImages, home):
-    processes = 20
-    number_of_images = int(totalNumImages) / processes
-    for i in range(processes):
-        offset = i * number_of_images
-        p = mp.Process(target=convertImagesToTxt, args=(int(number_of_images), int(offset), home))
-        p.start()
-    
-
-def multiP_tar(home):
-    processes = 15
+    """
+    Zipping the file below  
+    """
+    # Output dirs: 
     O_dir_list = []
     # 0 - 249,999
     O_dir_list.append(home + "raw_gz_files\\0.gz")
@@ -157,8 +133,8 @@ def multiP_tar(home):
     O_dir_list.append(home + "raw_gz_files\\600.gz")
     O_dir_list.append(home + "raw_gz_files\\650.gz")
     O_dir_list.append(home + "raw_gz_files\\700.gz")
-    
 
+    # Source dirs
     s_dir_list = []
     # 0 - 249,999
     s_dir_list.append(home + "coordinates\\set_0\\")
@@ -178,58 +154,62 @@ def multiP_tar(home):
     s_dir_list.append(home + "coordinates\\set_12\\")
     s_dir_list.append(home + "coordinates\\set_13\\")
     s_dir_list.append(home + "coordinates\\set_14\\")
-    
-    for i in range(processes):
-        output_filename = O_dir_list[i]
-        source_dir = s_dir_list[i]
-        p = mp.Process(target=make_tarfile, args=(output_filename, source_dir))
-        p.start()
 
+    # Zipping the files
+    process_id = int(offset / number_of_images)
+    if process_id == 1:
+        print("Zipping files")
+    if process_id < 15:
+        make_tarfile(O_dir_list[process_id, s_dir_list[process_id]])
+
+# Function to run conversion with multiple processes 
+def multiP_img_2_txt(totalNumImages, home):
+    processes = 20
+    number_of_images = int(totalNumImages) / processes
+    for i in range(processes):
+        offset = i * number_of_images
+        p = mp.Process(target=convertImagesToTxt, args=(int(number_of_images), int(offset), home))
+        p.start()
+    
 if __name__ == "__main__":
     # Home directory settings: 
-    home = 'C:\\Users\\Nate\\run_combined\\'
-    mode = 'create'
-    ############################################################################
-    if mode == 'credate':
-        # Cleaning / working on coordinates folder 
+    home = 'D:\\GAN\\run_combined\\'
+
+    # Cleaning / working on coordinates folder 
+    try:
+        shutil.rmtree(home + "coordinates\\")
         print("Removing coordinates dir")
-        try:
-            shutil.rmtree(home + "coordinates\\")
-        except:
-            print("Not coordinates folder to remove")
-        print("Making coordinates dir")
-        os.mkdir(home + "coordinates\\")
-        
-        # Making set 0 dirs
-        os.mkdir(home + "coordinates\\set_0\\")
-        os.mkdir(home + "coordinates\\set_1\\")
-        os.mkdir(home + "coordinates\\set_2\\")
-        os.mkdir(home + "coordinates\\set_3\\")
-        os.mkdir(home + "coordinates\\set_4\\")
+    except:
+        print("Not coordinates folder to remove")
+    print("Making coordinates dir")
+    os.mkdir(home + "coordinates\\")
 
-        # Making set 1 dirs 
-        os.mkdir(home + "coordinates\\set_5\\")
-        os.mkdir(home + "coordinates\\set_6\\")
-        os.mkdir(home + "coordinates\\set_7\\")
-        os.mkdir(home + "coordinates\\set_8\\")
-        os.mkdir(home + "coordinates\\set_9\\")
+    # Cleaning / working on raw_gz_files folder 
+    try:
+        shutil.rmtree(home + '\\raw_gz_files\\')
+        print("Removing raw_gz_files dir")
+    except:
+        print("No raw gz files folder to remove")
+    print("Making raw_gz_files dir")
+    os.mkdir(home + "raw_gz_files\\")
+    
+    # Making set directories for 750,000 designs (50,000 per set)
+    os.mkdir(home + "coordinates\\set_0\\")
+    os.mkdir(home + "coordinates\\set_1\\")
+    os.mkdir(home + "coordinates\\set_2\\")
+    os.mkdir(home + "coordinates\\set_3\\")
+    os.mkdir(home + "coordinates\\set_4\\")
+    os.mkdir(home + "coordinates\\set_5\\")
+    os.mkdir(home + "coordinates\\set_6\\")
+    os.mkdir(home + "coordinates\\set_7\\")
+    os.mkdir(home + "coordinates\\set_8\\")
+    os.mkdir(home + "coordinates\\set_9\\")
+    os.mkdir(home + "coordinates\\set_10\\")
+    os.mkdir(home + "coordinates\\set_11\\")
+    os.mkdir(home + "coordinates\\set_12\\")
+    os.mkdir(home + "coordinates\\set_13\\")
+    os.mkdir(home + "coordinates\\set_14\\")
 
-        os.mkdir(home + "coordinates\\set_10\\")
-        os.mkdir(home + "coordinates\\set_11\\")
-        os.mkdir(home + "coordinates\\set_12\\")
-        os.mkdir(home + "coordinates\\set_13\\")
-        os.mkdir(home + "coordinates\\set_14\\")
-
-        # # Running conversion of images to coordinates in parallel 
-        print("Running image to text conversion")
-        multiP_img_2_txt(750000, home)
-    else:
-        # Cleaning / working on raw_gz_files folder 
-        try:
-            shutil.rmtree(home + '\\raw_gz_files\\')
-        except:
-            print("No raw gz files folder to remove")
-        os.mkdir(home + "raw_gz_files\\")
-
-        # Compressing all of the files in parallel 
-        multiP_tar(home)
+    # # Running conversion of images to coordinates in parallel 
+    print("Running image to text conversion")
+    multiP_img_2_txt(750000, home)
