@@ -20,8 +20,13 @@ def generate_random_ellipse_structure(number_of_images, offset, save_dir):
     count = 0
     while count < number_of_images:
         # Nate custom parameters
+        # param_1 = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
+        # param_2 = np.random.uniform(1.25, 2.75) # Some sort of scaling term - semi major axis
+        # param_3 = np.random.uniform(0.5, 1.25) # Some sort of scaling term - semi minor axis
+        # scaling = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
+
         param_1 = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
-        param_2 = np.random.uniform(1.25, 2.75) # Some sort of scaling term - semi major axis
+        param_2 = np.random.uniform(0.5, 2.75) # Some sort of scaling term - semi major axis
         param_3 = np.random.uniform(0.5, 1.25) # Some sort of scaling term - semi minor axis
         scaling = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
 
@@ -78,23 +83,19 @@ def generate_random_ellipse_structure(number_of_images, offset, save_dir):
         current = np.array(current, dtype=np.uint8)
 
         # Filtering the image 
-        for j in range(64):
-            for i in range(64):
-                if current[i,j] >= 90:
-                    current[i,j] = 0
-                else:
-                    current[i,j] = 1
+        current[current < 90] = 0
+        current[current >= 90] = 1
 
         # Checking the volume fraction
         totalSolid = current.sum()
         volFrac = totalSolid / (64 * 64)
-
-        if volFrac > 0.135 and volFrac < 0.265:
-            count = count + 1
+        if volFrac > 0 and volFrac < 0.40:
+            # print(volFrac)
+            count += 1
 
 def multiP(totalNumImages, save_dir):
     processes = 20
-    number_of_images = int(totalNumImages) / 20
+    number_of_images = int(totalNumImages) / processes
     for i in range(processes):
         offset = i * number_of_images
         p = mp.Process(target=generate_random_ellipse_structure, args=(int(number_of_images), int(offset), save_dir))
@@ -102,5 +103,5 @@ def multiP(totalNumImages, save_dir):
 
 if __name__ == "__main__":
     save_dir = "A:\\Research\\Last_minute_paper_stuff\\full_images\\images\\"
-    totalNumImages = 125000 # input("How many images would you like to generate? ")
+    totalNumImages = 100000 # input("How many images would you like to generate? ")
     multiP(totalNumImages, save_dir)
