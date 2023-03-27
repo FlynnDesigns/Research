@@ -1,0 +1,47 @@
+# config
+
+# model
+## support SegNet_AlexNet, SegNet_VGG, SegNet_ResNet18, SegNet_ResNet34, SegNet_ResNet50, SegNet_ResNet101, SegNet_ResNet152
+## FPN_ResNet18, FPN_ResNet50, FPN_ResNet101, FPN_ResNet34, FPN_ResNet152
+## FCN_AlexNet, FCN_VGG, FCN_ResNet18, FCN_ResNet50, FCN_ResNet101, FCN_ResNet34, FCN_ResNet152
+## UNet_VGG
+model_name: UNet # choose from FPN, FCN, SegNet, UNet
+backbone: VGG # choose from AlexNet, VGG, ResNet18, ResNet50, ResNet101
+
+# dataset path
+data_root: A:\Research\Research\Machine_Learning\U_NET\samples\data\
+boundary: mat_test # choose from rm_wall, one_point, all_walls
+# A:\Research\Research\Machine_Learning\U_NET\samples\data\mat_combined\train
+# "A:\Research\Research\Machine_Learning\U_NET\samples\data\final_mat_files_500"s
+# train/val set
+train_list: train\train_val.txt
+
+# test set
+test_list: test\test_val.txt
+
+# metric for testing
+## choose from "mae_global", "mae_boundary", "mae_component","mape_global"
+## "value_and_pos_error_of_maximum_temperature", "max_tem_spearmanr", "global_image_spearmanr"
+metric: mae_global
+
+# dataset format: mat or h5
+data_format: mat
+batch_size: 64
+max_epochs: 100
+lr: 0.001 # Learning rate was 0.01
+
+# number of gpus to use
+gpus: 1
+val_check_interval: 1.0
+
+# num_workers in dataloader
+num_workers: 4
+
+# preprocessing of data
+## input
+mean_layout: 0
+std_layout: 1
+
+## output
+mean_heat: 297
+std_heat: 100
