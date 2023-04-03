@@ -1,20 +1,18 @@
 import numpy as np 
 import os
 import shutil
-import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from multiprocessing import Process
+import subprocess
 import scipy.io as sci
-import multiprocessing as mp 
-import skimage
 
-def sig(x, k):
-    return 1 / (1 + np.exp(-k * (x - 0.5 + 0.157 - (0.3529411764705882 - 0.34))))
-
-def norm(x):
-    norm = (x - x.min()) * 2.0
-    denorm = x.max() - x.min()
-    return norm/denorm - 1.0
+# Function used to combine a group of text files into one file in WINDOWS
+def combineText(input, output):
+    open(output, 'w')
+    print("Combining: ", input)
+    command = "cat " + input + "*.txt > " + output
+    subprocess.run(['powershell', '-Command', command])
 
 def getMaxTemp(tempField):
     return np.max(tempField)
@@ -41,11 +39,16 @@ def plot_design(designField, tempField, name, dir):
     # Subplot 1 settings
     ax1 = plt.subplot(1,2,1)
     ax1.set_title('Density Field')
-    im1 = plt.imshow(designField, aspect='auto')
+    ax1.axis('off')
+    im1 = plt.imshow(designField, aspect='equal')
+    divider = make_axes_locatable(ax1)
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    plt.colorbar(im1, cax=cax, orientation='vertical')
     
     # Subplot 2 settings
     ax2 = plt.subplot(1,2,2)
     ax2.set_title('Temperature Field')
+    ax2.axis('off')
     im2 = plt.imshow(tempField, aspect='equal')
     divider = make_axes_locatable(ax2)
     cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -53,194 +56,157 @@ def plot_design(designField, tempField, name, dir):
     
     # Main plot settings
     volfrac = np.sum(designField) / (64 * 64)
-    plt.suptitle(name + '\n\n' + "Vol frac = " + str(round(volfrac, 3)) + ", Avg temp = " + str(round(avgTemp,3)) + ", Max temp = " + str(round(maxTemp,3)))
-    plt.savefig(dir + name + '.jpg', dpi = 300)
+    plt.suptitle('Design: ' + name + '\n\n' + "Vol frac = " + str(round(volfrac, 3)) + ", Avg temp = " + str(round(avgTemp,3)) + ", Max temp = " + str(round(maxTemp,3)))
+    plt.savefig(dir + name + '.jpg', dpi = 150)
     plt.close()
 
-def getResults(offset, process, numberOfSimsPerProcess, home, prefix, run, graph):
-    # Peformance metric to beat 
-    avgTempParallel = 313.608
-
-    # Temp variables and initial values 
-    count = 0
-    total = 0 
-    minTemp = 400
-    vol_frac_list = []
-    
-    for fileNum in range(offset, offset + numberOfSimsPerProcess):
-        file = prefix + "T_" + str(fileNum) + ".txt"
+def getResults(process_files, process, start_index, home, graph):
+    current_index = start_index
+    for file in process_files:
+        # Loading in the  temperature data (will bypass / skip files that cause errors)
         try:
-            # Loading in the temperature data
-            tempField = loadTemp(home + "temperatures\\" + file)
+            tempField = loadTemp(f"{home}temperatures\\{file}")
+            tempField = np.array(tempField, dtype=np.float32)
         except:
             continue
 
-        # Creating the full design domain 
-        design = np.zeros((74,66))
-        fullFileName = home + "coordinates\\" + prefix + str(fileNum) + ".txt"
-
         # Loading in the coordinates 
-        coordinates = np.loadtxt(fullFileName, delimiter=" ")
+        fullFileName = str(file).replace("T_", "")
+        coordinates = np.loadtxt(f"{home}coordinates\\{fullFileName}", delimiter=" ")
         coordinates = coordinates - 0.5
         coordinates = np.array(coordinates, dtype=int)
 
-        # Loading in the image 
-        image = skimage.io.imread(home + "sim_images\\images\\" + str(fileNum) + ".jpg")
-        image = np.array(image)
-        image = image[:, :, 0]
-
-        # Rotating the image 
-        # if prefix == "0":
-        #     rot = 0
-        # elif prefix == "90":
-        #     rot = 1
-        # elif prefix == "180":
-        #     rot = 2
-        # elif prefix == "270":
-        #     rot = 3
-        # image = np.rot90(image, rot)
-
-        # Normalizing and applying filter 
-        # img_normal = np.copy(image)
-        # for j in range(64):
-        #     for i in range(64):
-        #         if img_normal[i,j] >= 90:
-        #             img_normal[i,j] = 0
-        #         else:
-        #             img_normal[i,j] = 1
-
-        # img_normal = 1 - img_normal
-        # img_normal = abs(img_normal)
-        # image = img_normal
-        #image = norm(image)
-        image = image / 255
-        # image = 1 - image 
-        # image = abs(image)
-        # image = sig(image, 20)
-        # image = 1 - image
-        # image = np.abs(image) 
-
+        # Loading in the design field 
+        design = np.zeros((74,66))
+        for i in range (len(coordinates)):
+            x = coordinates[i, 0]
+            y = coordinates[i, 1]
+            design[y, x] = 1
         designField = design[5:69, 1:65]
 
-        # Making sure that the temperature field is oriented in the correct way 
-        # maxTempTest = 0
-        # orientationCorrected = 1
-        # for i in range(4):
-        #     designFieldTest = np.rot90(designField, i)
-            
-        #     # Calculating the stats of the design
-        #     avgTemp = getAvgTemp(designFieldTest, tempField) 
+        # Writing the vol_frac to a file 
+        volFracName = fullFileName.replace(".txt", "")
+        volfrac = designField.sum() / (64 * 64)
+        with open(f"{home}temp_vol_frac_stats\\{process}_fake.txt", "a") as file:
+            file.write(f"{volFracName}, {volfrac:.5f}\n")
 
-        #     if avgTemp > maxTempTest:
-        #         maxTempTest = avgTemp
-        #         orientationCorrected = i
-
-        # designField = np.rot90(designField, orientationCorrected)
-            
-        # Calculating the stats of the design
+        baseTemp = 300
+        
+        for i in range(4):  
+            tempDesignField = np.rot90(designField, -i)
+            currentTemp = getAvgTemp(tempDesignField, tempField)
+            if currentTemp > baseTemp:
+                designField = tempDesignField
+                avgTemp = currentTemp
+        
+        # Loading in the image 
         avgTemp = getAvgTemp(designField, tempField)
-        vol_frac = np.sum(designField) / (64 * 64)
 
         # Writing the stats to a text file 
-        with open(home + 'stats\\' + prefix + "_" + str(process) + '.txt', 'a') as f:
-            newName =str(run) + "_" + prefix + "_" + str(fileNum)
-            f.write(newName + ", " + str(avgTemp) + "\n")
+        with open(home + 'temp_temp_stats\\' + str(process) + '.txt', 'a') as f:
+            f.write(f"{volFracName}, {avgTemp}\n")
 
-        # Incrementing the total number of files (used later)
-        total = total + 1
+        # Plotting the temp and design field (turn this on for debugging)
+        if graph == True:
+            plot_design(designField, tempField, volFracName, home + "best_best\\")
 
-        # Creating and writing a mat file for each design
-        tempField = np.array(tempField, dtype=np.float32)
-        tempFieldMat = np.copy(tempField)
-        tempFieldMat = np.rot90(tempFieldMat, -2)
+        # Saving the mat version of the file to test or train
+        fullFileName = fullFileName.replace(".txt", ".mat")
+        tempField = np.rot90(tempField, 2)
+        designField = np.rot90(designField, 2)
+        mdict = {"u": tempField, "F": designField}
 
-        image = np.array(image, dtype=np.float32)
-        imageMat = np.copy(image)
-        imageMat = np.rot90(imageMat, -1)
+        if current_index < 500000:
+            sci.savemat(f"{home}mat_files\\train\\train\\{fullFileName}", mdict)
+            with open(f"{home}mat_files\\train\\train_val.txt", "a") as file:
+                file.write(f"{fullFileName}\n")
+        else:
+            sci.savemat(f"{home}mat_files\\test\\test\\{fullFileName}", mdict)
+            with open(f"{home}mat_files\\test\\test_val.txt", "a") as file:
+                file.write(f"{fullFileName}\n")
 
-        mdict = {"u": tempFieldMat, "F": imageMat}
-        matFileName = str(run) + "_" + prefix + "_" + str(fileNum) + '.mat'
-        sci.savemat(home + 'mat_files\\train\\train\\' + matFileName, mdict)
-        # plot_design(designField, tempField, str(run) + "_" + prefix + "_" + str(fileNum), home + "best_best\\")
-        
-        image = np.transpose()
-        # Tracking the best designs
-        if avgTemp < minTemp:
-            minTemp = avgTemp # Recording the smallest temp 
-            design = designField # Recordint the best design 
+        # Keeping track of current index
+        current_index += 1
 
-        # Tracking the number of data points better than parallel fin 
-        if avgTemp < avgTempParallel:
-            vol_frac_list.append(vol_frac)
-            if graph == True:
-                plot_design(designField, tempField, str(run) + "_" + prefix + "_" + str(fileNum), home + "best_best\\")
-    
-    # Writing the volumetric data to a file 
-    # volFracs = np.array(vol_frac_list)
-    # minFracs = volFracs.min()
-    # maxFracs = volFracs.max()
-    # avgFracs = volFracs.mean()
-    # with open(home + 'vol_frac_info\\general_stats.txt', 'a') as  file:
-    #     file.write(str(round(minFracs, 3)) + ", " + str(round(maxFracs, 3)) + ", " + str(round(avgFracs, 3)) + "\n")
 
-    with open(home + 'stats\\' + prefix + "_" + str(process) + '.txt', 'a') as f:
-            newName =str(run) + "_" + prefix + "_" + str(fileNum)
-            f.write(newName + ", " + str(avgTemp) + "\n")
+def multiP(home, processes=20, graph=False, data=None):
+    # Cleaning best best dir 
+    try:
+        shutil.rmtree(f"{home}best_best\\")
+    except:
+        print("No best best to remove")
+    os.mkdir(f"{home}best_best\\")
 
-def multiP(totalNumSimulations, home, key="", numProcesses=4, run=0, graph=False):
-    processes = numProcesses
-    number_of_sims_per_process = totalNumSimulations / processes
+    # Cleaning mat files dir 
+    try:
+        shutil.rmtree(home + 'mat_files\\')
+    except:
+        print("No mat files to remove!")
+    os.mkdir(home + 'mat_files\\')
+    os.mkdir(home + 'mat_files\\train\\')
+    os.mkdir(home + 'mat_files\\train\\train\\')
+    os.mkdir(home + 'mat_files\\test\\')
+    os.mkdir(home + 'mat_files\\test\\test\\')
+
+    # Cleaning stats file dir 
+    try: 
+        shutil.rmtree(home + "temp_temp_stats\\")
+    except:
+        print("No stats file dir to remove")
+    os.mkdir(f"{home}temp_temp_stats\\")
+
+    # Cleaning volume fraction stats dir 
+    try:
+        shutil.rmtree(f"{home}temp_vol_frac_stats\\")
+    except:
+        print("No volume fraction stats to remove")
+    os.mkdir(f"{home}temp_vol_frac_stats\\")
+
+    # Breaking up the list of files 
+    files = list(os.listdir(f"{home}temperatures\\"))
+    number_of_files = len(files)
+    number_of_files_per_process = int(number_of_files / processes)
+
+    # Launching the processes
+    print("Running")
+    my_processes = []
     for i in range(processes):
-        offset = i * number_of_sims_per_process
-        p = mp.Process(target=getResults, args=(int(offset), int(i), int(number_of_sims_per_process), home, key, int(run), graph))
+        offset = int(i * number_of_files_per_process)
+        try:
+            process_files = files[offset:(offset + number_of_files_per_process)]
+        except:
+            process_files = files[offset:number_of_files]
+
+        p = Process(target=getResults, args=(process_files, int(i), offset, home, graph))
         p.start()
-        
+        my_processes.append(p)
+
+    # Syncing all processes
+    for job in my_processes:
+        job.join()
+
+    # # Combining temperature stats and cleaning up files 
+    if data != None:
+        temp_name = f"{data}_temperature_stats.txt"
+        vol_name = f"{data}_vol_frac_stats.txt"
+    else:
+        temp_name = f"temperature_stats.txt"
+        vol_name = f"vol_frac_stats.txt"
+
+    combineText(f"{input_dir}temp_temp_stats\\", f"{input_dir}stats\\{temp_name}")
+    print("Cleaning up temp dir")
+    shutil.rmtree(f"{input_dir}temp_temp_stats\\")
+    print("Done")
+
+    # Combining volume fraction stats and cleaning up files 
+    combineText(f"{input_dir}temp_vol_frac_stats\\", f"{input_dir}stats\\{vol_name}")
+    print("Cleaning up temp dir")
+    shutil.rmtree(f"{input_dir}temp_vol_frac_stats\\")
+    print("Done")
+    
 if __name__ == "__main__":
-    run = 0
-    home = 'D:\\GAN\\run_' + str(run) + '\\'
-    simulations = 500000
-    threads = 20
-    graph = True
-    clean_best = True
-    clean_mat = True
-    clean_stats = True
-
-    if clean_best == True:
-        # Cleaning best best dir 
-        try:
-            shutil.rmtree(home + 'best_best\\')
-        except:
-            print("No best best to remove")
-        os.mkdir(home + 'best_best\\')
-
-    if clean_mat == True:
-        # Cleaning mat files dir 
-        try:
-            shutil.rmtree(home + 'mat_files\\')
-        except:
-            print("No mat files to remove!")
-        os.mkdir(home + 'mat_files\\')
-        os.mkdir(home + 'mat_files\\train\\')
-        os.mkdir(home + 'mat_files\\train\\train\\')
-
-    if clean_stats == True:
-        # Cleaning stats file dir 
-        try: 
-            shutil.rmtree(home + "stats\\")
-        except:
-            print("No stats file dir to remove")
-        os.mkdir(home + "stats\\")
-
-    multiP(simulations, home, "", threads, run, graph)
-
-    # # Running for 0
-    # multiP(simulations, home, "0", threads, run, graph)
-
-    # # Running for 90
-    # multiP(simulations, home, "90", threads, run, graph)
-
-    # # Running for 180
-    # multiP(simulations, home, "180", threads, run, graph)
-
-    # # Running for 270
-    # multiP(simulations, home, "270", threads, run, graph)
+    # Extracting the data here 
+    graph = False
+    data = None
+    input_dir = "A:\\godMode\\"
+    multiP(input_dir, graph=graph, data=data)
