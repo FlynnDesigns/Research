@@ -13,22 +13,16 @@ sys.path.append("./..")
 import ellipse_packing as ep             
 import os
 import multiprocessing as mp
-import skimage 
+import skimage.io as ski
 import cv2
 
-def generate_random_ellipse_structure(number_of_images, offset, save_dir):
+def generate_random_ellipse_structure(number_of_images, offset, totalNumImages, save_dir):
     count = 0
     while count < number_of_images:
-        # Nate custom parameters
-        # param_1 = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
-        # param_2 = np.random.uniform(1.25, 2.75) # Some sort of scaling term - semi major axis
-        # param_3 = np.random.uniform(0.5, 1.25) # Some sort of scaling term - semi minor axis
-        # scaling = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
-
-        param_1 = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
+        param_1 = 1 # Some sort of scaling term
         param_2 = np.random.uniform(0.5, 2.75) # Some sort of scaling term - semi major axis
         param_3 = np.random.uniform(0.5, 1.25) # Some sort of scaling term - semi minor axis
-        scaling = 1 #np.random.uniform(0.25, 2) # Some sort of scaling term
+        scaling = 1 # Some sort of scaling term
 
         num_x = np.random.randint(2, 10) # Number of elipses in the x direction
         num_y = np.random.randint(2, 10) # Number of elipses in the y directoin 
@@ -72,25 +66,29 @@ def generate_random_ellipse_structure(number_of_images, offset, save_dir):
         plt.close()
 
         # Reading the images back in here:
-        image = skimage.io.imread(file_name_color)
+        image = ski.imread(file_name_color)
         original = np.asarray(image)
         current = np.copy(original)
 
         # Resizing the image to 64 x 64 if it is not the correct size 
         current = cv2.resize(current, dsize=(64,64),  interpolation=cv2.INTER_CUBIC)
-        size = current.shape
+        new_image = np.copy(current)
+        
+        # Filtering the image
         current = current[:,:,0]
-        current = np.array(current, dtype=np.uint8)
-
-        # Filtering the image 
+        current = np.array(current, dtype=np.uint8) 
         current[current < 90] = 0
         current[current >= 90] = 1
 
         # Checking the volume fraction
         totalSolid = current.sum()
         volFrac = totalSolid / (64 * 64)
-        if volFrac > 0 and volFrac < 0.40:
-            # print(volFrac)
+        if volFrac > 0.1 and volFrac < 0.30:
+            # Saving 90, 180, 270 degree designs
+            for degree in range(1, 4):
+                new_num = fileNumber + totalNumImages * degree
+                temp = np.rot90(new_image, degree)
+                ski.imsave(f"{save_dir}{new_num}.png", temp)
             count += 1
 
 def multiP(totalNumImages, save_dir):
@@ -98,10 +96,10 @@ def multiP(totalNumImages, save_dir):
     number_of_images = int(totalNumImages) / processes
     for i in range(processes):
         offset = i * number_of_images
-        p = mp.Process(target=generate_random_ellipse_structure, args=(int(number_of_images), int(offset), save_dir))
+        p = mp.Process(target=generate_random_ellipse_structure, args=(int(number_of_images), int(offset), int(totalNumImages), save_dir))
         p.start()
 
 if __name__ == "__main__":
-    save_dir = "A:\\Research\\Last_minute_paper_stuff\\full_images\\images\\"
+    save_dir = "A:\\Research\\Last_minute_paper_stuff\\attempt_1\\ep_images\\images\\"
     totalNumImages = 100000 # input("How many images would you like to generate? ")
     multiP(totalNumImages, save_dir)

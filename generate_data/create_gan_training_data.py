@@ -7,9 +7,9 @@ import shutil
 def createGanData(process_files, home_dir):
     for file in process_files:
         try:
-            shutil.copy2(f"{home_dir}full_images\\images\\{file}.jpg", f"{home_dir}gan_images\\images\\{file}.jpg")
+            shutil.copy2(f"{home_dir}ep_images\\images\\{file}.jpg", f"{home_dir}gan_images\\images\\{file}.jpg")
         except:
-            shutil.copy2(f"{home_dir}full_images\\images\\{file}.png", f"{home_dir}gan_images\\images\\{file}.png")
+            shutil.copy2(f"{home_dir}ep_images\\images\\{file}.png", f"{home_dir}gan_images\\images\\{file}.png")
 
 # Function to run conversion with multiple processes 
 def multiP_create_gan_data(home_dir, processes=20):
@@ -25,7 +25,7 @@ def multiP_create_gan_data(home_dir, processes=20):
 
     # Pull in random data 
     total_dict = {}
-    with open(f"{home_dir}\\combined_stats\\real_stats.txt", "r", encoding="UTF-16") as f:
+    with open(f"{home_dir}\\stats\\temperature_stats.txt", "r", encoding="UTF-16") as f:
         lines = f.readlines()
 
         for line in lines:
@@ -36,7 +36,7 @@ def multiP_create_gan_data(home_dir, processes=20):
     random_files = np.random.choice(keys, 50000, replace=False)
 
     # Writing the stats of the random data to a file 
-    with open(f"{home_dir}\\combined_stats\\gan_stats.txt", "a") as f:
+    with open(f"{home_dir}\\stats\\gan_stats.txt", "a") as f:
         for design in random_files:
             temp = total_dict[design]
             f.write(f"{design}, {temp:.4f}\n")
@@ -57,8 +57,8 @@ def multiP_create_gan_data(home_dir, processes=20):
     
 if __name__ == "__main__":
     # Directory the code will run out of 
-    home_dir = "A:\\Research\\Last_minute_paper_stuff\\"
+    home_dir = "A:\\Research\\Last_minute_paper_stuff\\attempt_1\\"
 
     # Running conversion of images to coordinates in parallel 
-    print("Running image to text conversion")
+    print("Creating GAN data")
     multiP_create_gan_data(home_dir)
