@@ -5,6 +5,8 @@ Cluster=$3 # Cluster number of the job
 simNum=$4 # Number of simulations to be ran 
 offset=$5 # Custom offset for coordinate file name indexing  
 
+echo $(($offset))
+
 # Unzipping the coordinate files 
 tar xf *.gz
 

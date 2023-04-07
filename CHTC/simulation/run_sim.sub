@@ -2,7 +2,7 @@
 coordinatesFileName=0
 numberOfCoordinatesPerFile=50000
 numOfSims=1
-numOfJobs=1
+numOfJobs=2
 
 ## Docker container ##
 universe = docker
@@ -11,7 +11,7 @@ docker_image = natsumizu/myopenfoam7
 ## Execuatable launch commands ##
 executable = run_sim.sh
 offset=$(coordinatesFileName)*$(numberOfCoordinatesPerFile)
-arguments = -d $(ProcId) $(Cluster) $(numOfSims) $(offset)
+arguments = -d $(ProcId) $(Cluster) $(numOfSims) $(offset) 
 
 ## Transfering simulation files (Simulation and the coordinates of the designs) ##
 transfer_input_files = /home/nflynn4/projects/Research/Simulation, /home/nflynn4/projects/Research/coordinates/$(coordinatesFileName).gz
