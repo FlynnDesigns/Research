@@ -1,17 +1,11 @@
 #!/bin/bash
 # Command line inputs 
-ProcId=$2
-Cluster=$3
-Process=$4
-NumberOfSimulations=$5
-DesignsPerFile=$6
-FileName=$7
-CustomOffset=$8
+ProcId=$2 # Process number within the job
+Cluster=$3 # Cluster number of the job
+simNum=$4 # Number of simulations to be ran 
+offset=$5 # Custom offset for coordinate file name indexing  
 
-# Number of simulations to be ran
-simNum="$NumberOfSimulations"
-
-# Unzipping the files 
+# Unzipping the coordinate files 
 tar xf *.gz
 
 # Moving all of the coordinates 
@@ -28,11 +22,8 @@ i="0"
 while [ $i != $simNum ]
 do
 	# Grabbing a set of new solid coordinates 
-	fileNum=$(($ProcId*$simNum+$i))
-	offset=$(($DesignsPerFile*$FileName+$CustomOffset))
-	trueFileNum=$(($fileNum+$offset))
-	fileNum=$trueFileNum
-	echo "$(printf '%0.0f.txt' $fileNum)"
+	fileNum=$(($ProcId*$simNum+$i +$offset))
+	echo "$(printf '%0.0f.txt' $fileNum)" # Used for debugging 
 
 	# Pulling in the correct coordinate
 	cp -r coordinates/$(printf '%0.0f.txt' $fileNum) solid_coordinates.txt
@@ -54,4 +45,4 @@ do
 done
 
 # Zipping all of the files into one final tar file
-tar cf $(printf '%0.0f_%0.0f.gz' $Cluster $Process) *.txt
+tar cf $(printf '%0.0f_%0.0f.gz' $Cluster $ProcId) *.txt

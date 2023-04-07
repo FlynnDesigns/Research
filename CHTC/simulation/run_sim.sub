@@ -1,1 +1,34 @@
-Test
+## Launch settings #########
+coordinatesFileName=50.gz
+offset=0
+numOfSims=1
+numOfJobs=1
+###########################
+
+## Docker container ##
+universe = docker
+docker_image = natsumizu/myopenfoam7
+
+## Specify the commands for your executable ##
+executable = run_sim.sh
+arguments = -d $(ProcId) $(Cluster) $(numOfSims) $(offset)
+
+## Transfering simulation files (Simulation and the coordinates of the designs) ##
+transfer_input_files = /home/nflynn4/projects/Research/Simulation, /home/nflynn4/projects/Research/coordinates/$(coordinatesFileName)
+
+## HTCondor output files ##
+log = /home/nflynn4/projects/Research/CHTC/simulation/log_files/$(Cluster)_$(Process).log
+
+## OpenFOAM output files and settings ##
+when_to_transfer_output = ON_EXIT
+should_transfer_files = YES
+transfer_output_files = Simulation/$(Cluster)_$(ProcId).gz
+
+## Compute resource settings ##
+request_cpus = 1
+request_memory = 4GB
+request_disk = 10GB
+max_retries = 10
+
+# Tell HTCondor how many jobs to run 
+queue $(numOfJobs)
