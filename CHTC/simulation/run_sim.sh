@@ -22,8 +22,7 @@ i="0"
 while [ $i != $simNum ]
 do
 	# Grabbing a set of new solid coordinates 
-	fileNum=$(($ProcId*$simNum+$i +$offset))
-	echo "$(printf '%0.0f.txt' $fileNum)" # Used for debugging 
+	fileNum=$(($ProcId*$simNum+$i+$offset))
 
 	# Pulling in the correct coordinate
 	cp -r coordinates/$(printf '%0.0f.txt' $fileNum) solid_coordinates.txt
