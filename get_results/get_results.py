@@ -68,6 +68,7 @@ def getResults(process_files, process, start_index, home, graph):
             tempField = loadTemp(f"{home}temperatures\\{file}")
             tempField = np.array(tempField, dtype=np.float32)
         except:
+            print(f"{file} failed")
             continue
 
         # Loading in the coordinates 
@@ -116,14 +117,11 @@ def getResults(process_files, process, start_index, home, graph):
         designField = np.rot90(designField, 2)
         mdict = {"u": tempField, "F": designField}
 
+        # Splitting up the data set into test and train 
         if current_index < 500000:
             sci.savemat(f"{home}mat_files\\train\\train\\{fullFileName}", mdict)
-            with open(f"{home}mat_files\\train\\train_val.txt", "a") as file:
-                file.write(f"{fullFileName}\n")
         else:
             sci.savemat(f"{home}mat_files\\test\\test\\{fullFileName}", mdict)
-            with open(f"{home}mat_files\\test\\test_val.txt", "a") as file:
-                file.write(f"{fullFileName}\n")
 
         # Keeping track of current index
         current_index += 1
@@ -162,6 +160,12 @@ def multiP(home, processes=20, graph=False, data=None):
         print("No volume fraction stats to remove")
     os.mkdir(f"{home}temp_vol_frac_stats\\")
 
+    # Creating stats dir if not there
+    try:
+        os.mkdir(f"{home}stats\\")
+    except:
+        pass
+
     # Breaking up the list of files 
     files = list(os.listdir(f"{home}temperatures\\"))
     number_of_files = len(files)
@@ -193,20 +197,35 @@ def multiP(home, processes=20, graph=False, data=None):
         temp_name = f"temperature_stats.txt"
         vol_name = f"vol_frac_stats.txt"
 
-    combineText(f"{input_dir}temp_temp_stats\\", f"{input_dir}stats\\{temp_name}")
+    combineText(f"{home}temp_temp_stats\\", f"{home}stats\\{temp_name}")
     print("Cleaning up temp dir")
     shutil.rmtree(f"{input_dir}temp_temp_stats\\")
     print("Done")
 
     # Combining volume fraction stats and cleaning up files 
-    combineText(f"{input_dir}temp_vol_frac_stats\\", f"{input_dir}stats\\{vol_name}")
+    combineText(f"{home}temp_vol_frac_stats\\", f"{home}stats\\{vol_name}")
     print("Cleaning up temp dir")
-    shutil.rmtree(f"{input_dir}temp_vol_frac_stats\\")
+    shutil.rmtree(f"{home}temp_vol_frac_stats\\")
     print("Done")
-    
+
+    # Writing the file names for mat test and train 
+    train_files = os.listdir(f"{home}mat_files\\train\\train\\")
+    with open(f"{home}mat_files\\train\\train_val.txt", "a") as f:
+        for file in train_files:
+            f.write(f"{file}\n")
+
+    test_files = os.listdir(f"{home}mat_files\\test\\test\\")
+    with open(f"{home}mat_files\\test\\test_val.txt", "a") as f:
+        for file in test_files:
+            f.write(f"{file}\n")
+
 if __name__ == "__main__":
-    # Extracting the data here 
+    # Visualization settings 
     graph = False
     data = None
-    input_dir = "A:\\godMode\\"
+
+    # Input directory 
+    input_dir = "A:\\Research\\Last_minute_paper_stuff\\attempt_1_sim\\"
+    
+    # Running with parallel processes
     multiP(input_dir, graph=graph, data=data)
