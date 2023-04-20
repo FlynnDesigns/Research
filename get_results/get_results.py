@@ -84,24 +84,20 @@ def getResults(process_files, process, start_index, home, graph):
             y = coordinates[i, 1]
             design[y, x] = 1
         designField = design[5:69, 1:65]
+        designField = np.rot90(designField, 2)
 
         # Writing the vol_frac to a file 
         volFracName = fullFileName.replace(".txt", "")
         volfrac = designField.sum() / (64 * 64)
-        with open(f"{home}temp_vol_frac_stats\\{process}_fake.txt", "a") as file:
-            file.write(f"{volFracName}, {volfrac:.5f}\n")
 
-        baseTemp = 300
-        
-        for i in range(4):  
-            tempDesignField = np.rot90(designField, -i)
-            currentTemp = getAvgTemp(tempDesignField, tempField)
-            if currentTemp > baseTemp:
-                designField = tempDesignField
-                avgTemp = currentTemp
-        
         # Loading in the image 
         avgTemp = getAvgTemp(designField, tempField)
+
+        if avgTemp < 0 or avgTemp > 1500:
+            continue
+
+        with open(f"{home}temp_vol_frac_stats\\{process}_fake.txt", "a") as file:
+            file.write(f"{volFracName}, {volfrac:.5f}\n")
 
         # Writing the stats to a text file 
         with open(home + 'temp_temp_stats\\' + str(process) + '.txt', 'a') as f:
@@ -118,10 +114,10 @@ def getResults(process_files, process, start_index, home, graph):
         mdict = {"u": tempField, "F": designField}
 
         # Splitting up the data set into test and train 
-        if current_index < 500000:
-            sci.savemat(f"{home}mat_files\\train\\train\\{fullFileName}", mdict)
-        else:
-            sci.savemat(f"{home}mat_files\\test\\test\\{fullFileName}", mdict)
+        # if current_index < 500000:
+        #     sci.savemat(f"{home}mat_files\\train\\train\\{fullFileName}", mdict)
+        # else:
+        #     sci.savemat(f"{home}mat_files\\test\\test\\{fullFileName}", mdict)
 
         # Keeping track of current index
         current_index += 1
@@ -225,7 +221,7 @@ if __name__ == "__main__":
     data = None
 
     # Input directory 
-    input_dir = "A:\\Research\\Last_minute_paper_stuff\\attempt_1_sim\\"
+    input_dir = "A:\\Research\\Last_minute_paper_stuff\\attempt_1_gan\\"
     
     # Running with parallel processes
     multiP(input_dir, graph=graph, data=data)
