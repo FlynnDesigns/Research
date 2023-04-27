@@ -1,0 +1,4 @@
+.images/
+.logs/
+*.jpeg
+.model_dir/
