@@ -17,8 +17,8 @@ arguments = -d $(ProcId) $(Cluster) $(numOfSims) $(offset)
 transfer_input_files = /home/nflynn4/projects/Research/Simulation, /home/nflynn4/projects/Research/coordinates/$(coordinatesFileName).gz
 
 ## HTCondor output files ##
-log = /home/nflynn4/projects/Research/CHTC/simulation/log_files/$(Cluster)_$(Process).log
-error = /home/nflynn4/projects/Research/CHTC/simulation/error_files/$(Cluster)_$(Process).err
+log = /home/nflynn4/projects/Research/CHTC/log_files/$(Cluster)_$(Process).log
+error = /home/nflynn4/projects/Research/CHTC/error_files/$(Cluster)_$(Process).err
 
 ## OpenFOAM output files and settings ##
 when_to_transfer_output = ON_EXIT
